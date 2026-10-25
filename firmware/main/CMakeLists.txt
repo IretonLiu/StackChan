@@ -18,10 +18,14 @@ file(GLOB_RECURSE STACK_CHAN_SOURCES
 set(STACK_CHAN_INCLUDE_DIRS 
     "."
 )
-# Keep the Pet hardware gateway explicit: ESP-IDF evaluates component
+# Keep Pet hardware policy sources explicit: ESP-IDF evaluates component
 # requirements in CMake script mode, where CONFIGURE_DEPENDS is unavailable.
-list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "hal/pet/pet_hardware\\.cpp$")
-list(APPEND STACK_CHAN_SOURCES main.cpp "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet/pet_hardware.cpp")
+list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "hal/pet/.*\\.cpp$")
+list(APPEND STACK_CHAN_SOURCES
+    main.cpp
+    "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet/pet_hardware.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet/pet_hardware_policy.cpp"
+)
 
 # Keep the optional XiaoZhi runtime source list explicit. Its checkout and
 # minimal board compatibility remain available to Pet Base even when disabled.

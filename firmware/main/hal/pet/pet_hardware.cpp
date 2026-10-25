@@ -2,9 +2,28 @@
  * SPDX-License-Identifier: MIT
  */
 #include "pet_hardware.h"
+#include "pet_hardware_policy.h"
 
 #include <hal/hal.h>
 #include <stackchan/stackchan.h>
+
+namespace {
+
+class StackChanSafeIdlePort final : public PetSafeIdlePort {
+public:
+    void setServoPowerEnabled(bool enabled) override
+    {
+        GetHAL().setServoPowerEnabled(enabled);
+    }
+
+    void setStatusLights(uint32_t rgb) override
+    {
+        GetStackChan().leftNeonLight().setColor(rgb);
+        GetStackChan().rightNeonLight().setColor(rgb);
+    }
+};
+
+}  // namespace
 
 void PetHardware::initialize()
 {
@@ -28,11 +47,8 @@ void PetHardware::feedWatchdog()
 
 void PetHardware::enterSafeIdle(uint32_t status_light_rgb)
 {
-    // Motion remains electrically disabled until a future pet behaviour
-    // policy explicitly authorizes it.
-    GetHAL().setServoPowerEnabled(false);
-    GetStackChan().leftNeonLight().setColor(status_light_rgb);
-    GetStackChan().rightNeonLight().setColor(status_light_rgb);
+    StackChanSafeIdlePort port;
+    PetHardwarePolicy::establishSafeIdle(port, status_light_rgb);
 }
 
 void PetHardware::update()

@@ -17,14 +17,23 @@ python3 ./fetch_repos.py
 idf.py build
 ```
 
-### Host-side tests
+### Tests
 
-The motion coordinate helpers can be tested without ESP-IDF hardware:
+The native host suite checks hardware-policy invariants and motion helpers
+without ESP-IDF hardware:
 
 ```bash
 cmake -S tests -B build-host-tests
 cmake --build build-host-tests
 ctest --test-dir build-host-tests --output-on-failure
+```
+
+For Pet Base, run the complete suite after exporting ESP-IDF. It runs those
+host tests, builds the isolated image, then verifies its build configuration
+and compiled-source boundary:
+
+```bash
+./tools/test_pet_firmware_base.sh
 ```
 
 ### Flash
