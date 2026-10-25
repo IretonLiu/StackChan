@@ -3,10 +3,9 @@
  */
 #include "app_pet_base.h"
 
-#include <hal/hal.h>
+#include <hal/pet/pet_hardware.h>
 #include <mooncake_log.h>
 #include <smooth_lvgl.hpp>
-#include <stackchan/stackchan.h>
 #include <string_view>
 
 using namespace smooth_ui_toolkit::lvgl_cpp;
@@ -31,7 +30,7 @@ void AppPetBase::onOpen()
 {
     mclog::tagInfo(kTag, "open custom pet base app");
 
-    LvglLockGuard lock;
+    PetHardware::DisplayLock lock;
 
     _panel = std::make_unique<Container>(lv_screen_active());
     _panel->setSize(320, 240);
@@ -54,15 +53,13 @@ void AppPetBase::onOpen()
 
     // This image is a safe, inert starting point: no autonomous servo motion
     // until the behaviour layer owns it.
-    GetHAL().setServoPowerEnabled(false);
-    GetStackChan().leftNeonLight().setColor(kPetBlue);
-    GetStackChan().rightNeonLight().setColor(kPetBlue);
-    _last_stackchan_update_ms = GetHAL().millis();
+    PetHardware::enterSafeIdle(kPetBlue);
+    _last_stackchan_update_ms = PetHardware::millis();
 }
 
 void AppPetBase::onRunning()
 {
-    const uint32_t now = GetHAL().millis();
+    const uint32_t now = PetHardware::millis();
     if (now - _last_stackchan_update_ms < kStackChanUpdateIntervalMs) {
         return;
     }
@@ -70,14 +67,14 @@ void AppPetBase::onRunning()
 
     // Keeps hardware effects (including the LEDs) progressing without the
     // old XiaoZhi background task. Future pet behaviour runs above this call.
-    GetStackChan().update();
+    PetHardware::update();
 }
 
 void AppPetBase::onClose()
 {
     mclog::tagInfo(kTag, "close custom pet base app");
 
-    LvglLockGuard lock;
+    PetHardware::DisplayLock lock;
     _status.reset();
     _title.reset();
     _panel.reset();

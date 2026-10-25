@@ -9,6 +9,7 @@
 #include <mooncake.h>
 #include <apps/apps.h>
 #include <hal/hal.h>
+#include <hal/pet/pet_hardware.h>
 
 using namespace mooncake;
 using namespace smooth_ui_toolkit;
@@ -19,12 +20,12 @@ extern "C" void app_main(void)
     mclog::set_level(mclog::level_info);
     mclog::set_time_format(mclog::time_format_unix_milliseconds);
 
-    // HAL init
-    GetHAL().init();
+    // The Pet hardware gateway owns access to the inherited board layer.
+    PetHardware::initialize();
 
     // Setup ui hal
-    ui_hal::on_delay([](uint32_t ms) { GetHAL().delay(ms); });
-    ui_hal::on_get_tick([]() { return GetHAL().millis(); });
+    ui_hal::on_delay([](uint32_t ms) { PetHardware::delay(ms); });
+    ui_hal::on_get_tick([]() { return PetHardware::millis(); });
 
 #if CONFIG_STACKCHAN_MINIMAL_PET_BASE
     // Custom-pet boot path. It never enters the XiaoZhi application loop.
@@ -34,12 +35,12 @@ extern "C" void app_main(void)
     if (pet_app_id < 0 || !GetMooncake().openApp(pet_app_id)) {
         mclog::tagError("PetBase", "failed to open custom pet app");
         while (true) {
-            GetHAL().feedTheDog();
+            PetHardware::feedWatchdog();
         }
     }
 
     while (true) {
-        GetHAL().feedTheDog();
+        PetHardware::feedWatchdog();
         GetMooncake().update();
     }
 #else

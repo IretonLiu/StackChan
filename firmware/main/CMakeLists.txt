@@ -18,7 +18,10 @@ file(GLOB_RECURSE STACK_CHAN_SOURCES
 set(STACK_CHAN_INCLUDE_DIRS 
     "."
 )
-list(APPEND STACK_CHAN_SOURCES main.cpp)
+# Keep the Pet hardware gateway explicit: ESP-IDF evaluates component
+# requirements in CMake script mode, where CONFIGURE_DEPENDS is unavailable.
+list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "hal/pet/pet_hardware\\.cpp$")
+list(APPEND STACK_CHAN_SOURCES main.cpp "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet/pet_hardware.cpp")
 
 # The Pet Base image has one app and only its local hardware HAL. Keep the
 # source list explicit so assistant/network features cannot creep back in.
