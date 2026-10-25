@@ -33,7 +33,9 @@ void Hal::init()
     ESP_ERROR_CHECK(ret);
 
     xiaozhi_board_init();
+#if !CONFIG_STACKCHAN_MINIMAL_PET_BASE
     xiaozhi_mcp_init();
+#endif
     head_touch_init();
     io_expander_init();
     rtc_init();

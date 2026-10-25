@@ -20,6 +20,13 @@ set(STACK_CHAN_INCLUDE_DIRS
 )
 list(APPEND STACK_CHAN_SOURCES main.cpp)
 
+# Pet Base has no MCP server. Exclude its custom integration and the upstream
+# server implementation now; other assistant runtime sources are removed in
+# later extraction steps once board support no longer needs their base types.
+if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+    list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX ".*/hal_mcp\\.cpp$")
+endif()
+
 # Define source files
 set(SOURCES "audio/audio_codec.cc"
             "audio/audio_service.cc"
@@ -63,6 +70,10 @@ set(SOURCES "audio/audio_codec.cc"
 
 # Transform relative paths to absolute paths from xiaozhi-esp32/main
 list(TRANSFORM SOURCES PREPEND "${XIAOZHI_MAIN_DIR}/")
+
+if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+    list(REMOVE_ITEM SOURCES "${XIAOZHI_MAIN_DIR}/mcp_server.cc")
+endif()
 
 set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
 # Transform include dirs to absolute paths from xiaozhi-esp32/main
