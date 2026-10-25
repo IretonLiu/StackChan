@@ -23,14 +23,19 @@ set(STACK_CHAN_INCLUDE_DIRS
 list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "hal/pet/pet_hardware\\.cpp$")
 list(APPEND STACK_CHAN_SOURCES main.cpp "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet/pet_hardware.cpp")
 
-# The Pet Base image has one app and only its local hardware HAL. Keep the
-# source list explicit so assistant/network features cannot creep back in.
-if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+# Keep the optional XiaoZhi runtime source list explicit. Its checkout and
+# minimal board compatibility remain available to Pet Base even when disabled.
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
     foreach(APP_DIR app_ai_agent app_app_center app_avatar app_dance app_espnow_ctrl app_ezdata app_launcher app_setup app_template)
-        list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX ".*/apps/${APP_DIR}/.*")
+        list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "(^|.*/)apps/${APP_DIR}/.*")
     endforeach()
-    foreach(HAL_SOURCE hal_account hal_app_center hal_ble hal_espnow hal_ezdata hal_mcp hal_network hal_ota hal_ws_avatar)
-        list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX ".*/hal/${HAL_SOURCE}\\.cpp$")
+    # Common app widgets and the HAL utility tree only support the optional
+    # XiaoZhi services. Pet Base has its own app and hardware gateway.
+    list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "(^|.*/)apps/common/.*")
+    list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "(^|.*/)hal/audio\\.cpp$")
+    list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "(^|.*/)hal/utils/.*")
+    foreach(HAL_SOURCE hal_account hal_app_center hal_app_setup hal_audio hal_ble hal_espnow hal_ezdata hal_mcp hal_network hal_ota hal_ws_avatar)
+        list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "(^|.*/)hal/${HAL_SOURCE}\\.cpp$")
     endforeach()
 endif()
 
@@ -78,7 +83,7 @@ set(SOURCES "audio/audio_codec.cc"
 # Transform relative paths to absolute paths from xiaozhi-esp32/main
 list(TRANSFORM SOURCES PREPEND "${XIAOZHI_MAIN_DIR}/")
 
-if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
     # AudioCodec, display, Board/WifiBoard, settings and a few common board
     # helpers remain temporarily. They are the small compatibility layer that
     # will be copied behind hal/ before the xiaozhi checkout can disappear.
@@ -197,7 +202,7 @@ list(APPEND SOURCES ${BOARD_SOURCES})
 
 # Board-common sources are appended after the first compatibility trim above.
 # Remove assistant-only ones here so they cannot survive due to list ordering.
-if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
     list(REMOVE_ITEM SOURCES
         "${XIAOZHI_MAIN_DIR}/boards/common/wifi_board.cc"
         "${XIAOZHI_MAIN_DIR}/boards/common/power_save_timer.cc"
@@ -206,7 +211,7 @@ endif()
 
 # Audio processing and wake-word code belong to the future wake-gated
 # companion module, not the non-verbal Pet Base image.
-if(NOT CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+if(CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
     if(CONFIG_USE_AUDIO_PROCESSOR)
         list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/processors/afe_audio_processor.cc")
     else()
@@ -364,8 +369,8 @@ if(CONFIG_IDF_TARGET_ESP32S3)
 endif()
 
 # The optional target-specific board sources are appended late. Trim after all
-# appends so no assistant/network object can sneak into Pet Base builds.
-if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+# appends so no assistant/network object can sneak into a runtime-disabled build.
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
     list(REMOVE_ITEM SOURCES
         ${PET_BASE_REMOVED_XIAOZHI_SOURCES}
         "${XIAOZHI_MAIN_DIR}/boards/common/esp_video.cc"
@@ -374,36 +379,51 @@ if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
     )
 endif()
 
+# The Pet Base image does not use assistant prompts or sound effects. The
+# retained camera driver references its shutter cue at link time, so keep only
+# that one embedded asset until the camera compatibility layer is extracted.
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
+    set(LANG_SOUNDS "")
+    set(COMMON_SOUNDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/sfx/camera_shutter.ogg")
+endif()
+
+set(STACKCHAN_PRIV_REQUIRES
+    esp_pm
+    esp_psram
+    esp_netif
+    esp_http_client
+    mbedtls
+    json
+    esp_driver_gpio
+    esp_driver_uart
+    esp_driver_spi
+    esp_driver_i2c
+    esp_driver_i2s
+    esp_driver_jpeg
+    esp_driver_ppa
+    esp_app_format
+    app_update
+    spi_flash
+    console
+    efuse
+    bt
+    fatfs
+    ArduinoJson
+    mooncake
+    mooncake_log
+    smooth_ui_toolkit
+)
+# esp-now installs global logging wrappers. Only pull it into images that
+# build the optional XiaoZhi runtime which uses ESP-NOW services.
+if(CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
+    list(APPEND STACKCHAN_PRIV_REQUIRES esp-now)
+endif()
+
 idf_component_register(SRCS ${SOURCES}
                     EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS}
                     INCLUDE_DIRS ${INCLUDE_DIRS}
                     WHOLE_ARCHIVE
-                    PRIV_REQUIRES
-                        esp_pm
-                        esp_psram
-                        esp_netif
-                        esp_http_client
-                        mbedtls
-                        json
-                        esp_driver_gpio
-                        esp_driver_uart
-                        esp_driver_spi
-                        esp_driver_i2c
-                        esp_driver_i2s
-                        esp_driver_jpeg
-                        esp_driver_ppa
-                        esp_app_format
-                        app_update
-                        spi_flash
-                        console
-                        efuse
-                        bt
-                        fatfs
-                        ArduinoJson
-                        esp-now
-                        mooncake
-                        mooncake_log
-                        smooth_ui_toolkit
+                    PRIV_REQUIRES ${STACKCHAN_PRIV_REQUIRES}
                     )
 
 # Use target_compile_definitions to define BOARD_TYPE, BOARD_NAME

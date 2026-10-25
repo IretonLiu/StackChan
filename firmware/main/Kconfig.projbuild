@@ -8,6 +8,15 @@ config STACKCHAN_MINIMAL_PET_BASE
         enter the XiaoZhi application loop. This is the transitional base
         layer while StackChan board support is extracted from XiaoZhi.
 
+config STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    bool "Build XiaoZhi runtime features"
+    default y if !STACKCHAN_MINIMAL_PET_BASE
+    default n
+    help
+        Include XiaoZhi assistant apps, networking/services, audio processing,
+        wake-word code, and remote-avatar services. This does not control the
+        small inherited board compatibility layer required by Pet Base.
+
 endmenu
 
 menu "StackChan Server"

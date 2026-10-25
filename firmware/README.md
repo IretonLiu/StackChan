@@ -43,7 +43,10 @@ It boots only `AppPetBase`: no launcher and no XiaoZhi assistant loop.
 ./tools/pet_firmware_base.sh -p /dev/ttyACM0 flash monitor
 ```
 
-This is deliberately transitional. The app itself has no XiaoZhi headers, but
-hardware bring-up still uses the existing XiaoZhi board component. The next
-base-layer milestones extract display, audio, touch, IMU, LEDs, servos, and
-NVS behind the custom `hal/` boundary.
+This is deliberately transitional. Pet code reaches hardware only through
+`hal/pet/pet_hardware.*`; the inherited XiaoZhi board component remains behind
+that gateway. `CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME` preserves the optional
+XiaoZhi feature set in the checkout, but Pet Base sets it to `n`, excluding its
+apps, services, audio processing, remote networking, and assistant assets.
+The retained display/camera/audio board compatibility is progressively being
+moved behind the custom `hal/` boundary.

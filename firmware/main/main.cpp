@@ -27,7 +27,7 @@ extern "C" void app_main(void)
     ui_hal::on_delay([](uint32_t ms) { PetHardware::delay(ms); });
     ui_hal::on_get_tick([]() { return PetHardware::millis(); });
 
-#if CONFIG_STACKCHAN_MINIMAL_PET_BASE
+#if CONFIG_STACKCHAN_MINIMAL_PET_BASE || !CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
     // Custom-pet boot path. It never enters the XiaoZhi application loop.
     // Board/display/audio bring-up remains in HAL while those dependencies are
     // extracted into our own minimal board component.

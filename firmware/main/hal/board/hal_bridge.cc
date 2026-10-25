@@ -11,7 +11,7 @@
 #include <nvs_flash.h>
 #include <driver/gpio.h>
 #include <esp_event.h>
-#if !CONFIG_STACKCHAN_MINIMAL_PET_BASE
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
 #include <application.h>
 #endif
 #include <board.h>
@@ -107,14 +107,15 @@ void disply_lvgl_unlock()
 
 void xiaozhi_board_init()
 {
-    // Init board
-    auto& board = Board::GetInstance();
+    // Construct the inherited board singleton; PetHardware is the only
+    // supported route from Pet Base to the facilities it exposes.
+    (void)Board::GetInstance();
 }
 
 void start_xiaozhi_app()
 {
-#if CONFIG_STACKCHAN_MINIMAL_PET_BASE
-    ESP_LOGE(_tag, "Xiaozhi runtime is excluded from the Pet Base image");
+#if !CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    ESP_LOGE(_tag, "Xiaozhi runtime is excluded from this image");
 #else
     set_xiaozhi_mode(true);
 

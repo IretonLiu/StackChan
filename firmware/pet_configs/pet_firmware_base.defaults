@@ -1,3 +1,7 @@
 # Custom pet-base image. Applied by tools/pet_firmware_base.sh only.
 # Do not add this to sdkconfig.defaults: stock StackChan builds must stay intact.
 CONFIG_STACKCHAN_MINIMAL_PET_BASE=y
+# Preserve XiaoZhi sources in the checkout but omit its optional runtime.
+CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME=n
+# Pet Base has no assistant assets or wake model to package or flash.
+CONFIG_FLASH_NONE_ASSETS=y
