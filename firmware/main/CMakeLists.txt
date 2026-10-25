@@ -100,6 +100,8 @@ if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
         "${XIAOZHI_MAIN_DIR}/mcp_server.cc"
         "${XIAOZHI_MAIN_DIR}/application.cc"
         "${XIAOZHI_MAIN_DIR}/ota.cc"
+        "${XIAOZHI_MAIN_DIR}/settings.cc"
+        "${XIAOZHI_MAIN_DIR}/system_info.cc"
         "${XIAOZHI_MAIN_DIR}/device_state_machine.cc"
         "${XIAOZHI_MAIN_DIR}/boards/common/wifi_board.cc"
         "${XIAOZHI_MAIN_DIR}/boards/common/power_save_timer.cc"
@@ -121,6 +123,9 @@ endif()
 set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
 # Transform include dirs to absolute paths from xiaozhi-esp32/main
 list(TRANSFORM INCLUDE_DIRS PREPEND "${XIAOZHI_MAIN_DIR}/")
+# Local compatibility headers shadow remaining XiaoZhi headers as each service
+# is migrated into hal/pet_compat/.
+list(PREPEND INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet_compat")
 
 # Add board common files
 list(APPEND SOURCES
@@ -353,6 +358,17 @@ endif()
 # Include Esp32Camera if target is ESP32S3
 if(CONFIG_IDF_TARGET_ESP32S3)
     list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/boards/common/esp32_camera.cc")
+endif()
+
+# The optional target-specific board sources are appended late. Trim after all
+# appends so no assistant/network object can sneak into Pet Base builds.
+if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+    list(REMOVE_ITEM SOURCES
+        ${PET_BASE_REMOVED_XIAOZHI_SOURCES}
+        "${XIAOZHI_MAIN_DIR}/boards/common/esp_video.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/rndis_board.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/esp32_camera.cc"
+    )
 endif()
 
 idf_component_register(SRCS ${SOURCES}
