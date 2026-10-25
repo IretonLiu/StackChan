@@ -11,7 +11,9 @@
 #include <nvs_flash.h>
 #include <driver/gpio.h>
 #include <esp_event.h>
+#if !CONFIG_STACKCHAN_MINIMAL_PET_BASE
 #include <application.h>
+#endif
 #include <board.h>
 #include <display.h>
 #include <mutex>
@@ -111,12 +113,16 @@ void xiaozhi_board_init()
 
 void start_xiaozhi_app()
 {
+#if CONFIG_STACKCHAN_MINIMAL_PET_BASE
+    ESP_LOGE(_tag, "Xiaozhi runtime is excluded from the Pet Base image");
+#else
     set_xiaozhi_mode(true);
 
     // Initialize and run the application
     auto& app = Application::GetInstance();
     app.Initialize();
     app.Run();  // This function runs the main event loop and never returns
+#endif
 }
 
 XiaozhiConfig_t get_xiaozhi_config()
@@ -147,8 +153,13 @@ void set_xiaozhi_config(const XiaozhiConfig_t& config)
 
 void app_play_sound(const std::string_view& sound)
 {
+#if CONFIG_STACKCHAN_MINIMAL_PET_BASE
+    (void)sound;
+    ESP_LOGW(_tag, "assistant sound request ignored in Pet Base image");
+#else
     auto& app = Application::GetInstance();
     app.PlaySound(sound);
+#endif
 }
 
 }  // namespace hal_bridge

@@ -20,11 +20,15 @@ set(STACK_CHAN_INCLUDE_DIRS
 )
 list(APPEND STACK_CHAN_SOURCES main.cpp)
 
-# Pet Base has no MCP server. Exclude its custom integration and the upstream
-# server implementation now; other assistant runtime sources are removed in
-# later extraction steps once board support no longer needs their base types.
+# The Pet Base image has one app and only its local hardware HAL. Keep the
+# source list explicit so assistant/network features cannot creep back in.
 if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
-    list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX ".*/hal_mcp\\.cpp$")
+    foreach(APP_DIR app_ai_agent app_app_center app_avatar app_dance app_espnow_ctrl app_ezdata app_launcher app_setup app_template)
+        list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX ".*/apps/${APP_DIR}/.*")
+    endforeach()
+    foreach(HAL_SOURCE hal_account hal_app_center hal_ble hal_espnow hal_ezdata hal_mcp hal_network hal_ota hal_ws_avatar)
+        list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX ".*/hal/${HAL_SOURCE}\\.cpp$")
+    endforeach()
 endif()
 
 # Define source files
@@ -72,7 +76,46 @@ set(SOURCES "audio/audio_codec.cc"
 list(TRANSFORM SOURCES PREPEND "${XIAOZHI_MAIN_DIR}/")
 
 if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
-    list(REMOVE_ITEM SOURCES "${XIAOZHI_MAIN_DIR}/mcp_server.cc")
+    # AudioCodec, display, Board/WifiBoard, settings and a few common board
+    # helpers remain temporarily. They are the small compatibility layer that
+    # will be copied behind hal/ before the xiaozhi checkout can disappear.
+    set(PET_BASE_REMOVED_XIAOZHI_SOURCES
+        "${XIAOZHI_MAIN_DIR}/audio/audio_service.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/demuxer/ogg_demuxer.cc"
+        "${XIAOZHI_MAIN_DIR}/display/lvgl_display/lvgl_display.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/no_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/box_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/es8311_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/es8374_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/es8388_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/es8389_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/codecs/dummy_audio_codec.cc"
+        "${XIAOZHI_MAIN_DIR}/audio/processors/audio_debugger.cc"
+        "${XIAOZHI_MAIN_DIR}/led/single_led.cc"
+        "${XIAOZHI_MAIN_DIR}/led/circular_strip.cc"
+        "${XIAOZHI_MAIN_DIR}/led/gpio_led.cc"
+        "${XIAOZHI_MAIN_DIR}/protocols/protocol.cc"
+        "${XIAOZHI_MAIN_DIR}/protocols/mqtt_protocol.cc"
+        "${XIAOZHI_MAIN_DIR}/protocols/websocket_protocol.cc"
+        "${XIAOZHI_MAIN_DIR}/mcp_server.cc"
+        "${XIAOZHI_MAIN_DIR}/application.cc"
+        "${XIAOZHI_MAIN_DIR}/ota.cc"
+        "${XIAOZHI_MAIN_DIR}/device_state_machine.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/wifi_board.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/power_save_timer.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/ml307_board.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/nt26_board.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/dual_network_board.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/adc_battery_monitor.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/afsk_demod.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/button.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/knob.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/press_to_talk_mcp_tool.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/sleep_timer.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/sy6970.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/system_reset.cc"
+    )
+    list(REMOVE_ITEM SOURCES ${PET_BASE_REMOVED_XIAOZHI_SOURCES})
 endif()
 
 set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
@@ -144,17 +187,29 @@ else()
 endif()
 list(APPEND SOURCES ${BOARD_SOURCES})
 
-# Select audio processor according to Kconfig
-if(CONFIG_USE_AUDIO_PROCESSOR)
-    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/processors/afe_audio_processor.cc")
-else()
-    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/processors/no_audio_processor.cc")
+# Board-common sources are appended after the first compatibility trim above.
+# Remove assistant-only ones here so they cannot survive due to list ordering.
+if(CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+    list(REMOVE_ITEM SOURCES
+        "${XIAOZHI_MAIN_DIR}/boards/common/wifi_board.cc"
+        "${XIAOZHI_MAIN_DIR}/boards/common/power_save_timer.cc"
+    )
 endif()
-if(CONFIG_IDF_TARGET_ESP32S3 OR CONFIG_IDF_TARGET_ESP32P4)
-    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/wake_words/afe_wake_word.cc")
-    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/wake_words/custom_wake_word.cc")
-else()
-    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/wake_words/esp_wake_word.cc")
+
+# Audio processing and wake-word code belong to the future wake-gated
+# companion module, not the non-verbal Pet Base image.
+if(NOT CONFIG_STACKCHAN_MINIMAL_PET_BASE)
+    if(CONFIG_USE_AUDIO_PROCESSOR)
+        list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/processors/afe_audio_processor.cc")
+    else()
+        list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/processors/no_audio_processor.cc")
+    endif()
+    if(CONFIG_IDF_TARGET_ESP32S3 OR CONFIG_IDF_TARGET_ESP32P4)
+        list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/wake_words/afe_wake_word.cc")
+        list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/wake_words/custom_wake_word.cc")
+    else()
+        list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/audio/wake_words/esp_wake_word.cc")
+    endif()
 endif()
 
 # Auto Select Additional Sources

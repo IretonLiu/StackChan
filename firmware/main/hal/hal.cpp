@@ -134,8 +134,10 @@ void Hal::updateHeapStatusLog()
 /* -------------------------------------------------------------------------- */
 #include "board/hal_bridge.h"
 #include <stackchan/stackchan.h>
+#if !CONFIG_STACKCHAN_MINIMAL_PET_BASE
 #include <apps/common/common.h>
 #include <assets/assets.h>
+#endif
 
 void Hal::xiaozhi_board_init()
 {
@@ -144,6 +146,7 @@ void Hal::xiaozhi_board_init()
     hal_bridge::xiaozhi_board_init();
 }
 
+#if !CONFIG_STACKCHAN_MINIMAL_PET_BASE
 static void _stackchan_update_task(void* param)
 {
     bool is_setup_done = false;
@@ -203,6 +206,13 @@ void Hal::startXiaozhi()
 
     hal_bridge::start_xiaozhi_app();
 }
+#else
+void Hal::startXiaozhi()
+{
+    // The Pet Base image deliberately has no assistant runtime to start.
+    mclog::tagError(_tag, "Xiaozhi is unavailable in the Pet Base image");
+}
+#endif
 
 XiaozhiConfig_t Hal::getXiaozhiConfig()
 {
