@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #pragma once
+#include "app_pet_base/app_pet_base.h"
 #include "app_launcher/app_launcher.h"
 #include "app_ai_agent/app_ai_agent.h"
 #include "app_avatar/app_avatar.h"

@@ -26,6 +26,23 @@ extern "C" void app_main(void)
     ui_hal::on_delay([](uint32_t ms) { GetHAL().delay(ms); });
     ui_hal::on_get_tick([]() { return GetHAL().millis(); });
 
+#if CONFIG_STACKCHAN_MINIMAL_PET_BASE
+    // Custom-pet boot path. It never enters the XiaoZhi application loop.
+    // Board/display/audio bring-up remains in HAL while those dependencies are
+    // extracted into our own minimal board component.
+    const int pet_app_id = GetMooncake().installApp(std::make_unique<AppPetBase>());
+    if (pet_app_id < 0 || !GetMooncake().openApp(pet_app_id)) {
+        mclog::tagError("PetBase", "failed to open custom pet app");
+        while (true) {
+            GetHAL().feedTheDog();
+        }
+    }
+
+    while (true) {
+        GetHAL().feedTheDog();
+        GetMooncake().update();
+    }
+#else
     const bool skip_mooncake =
         GetHAL().getXiaozhiConfig().startAiAgentOnBoot && GetHAL().getWarmRebootTarget() < 0;
 
@@ -59,4 +76,5 @@ extern "C" void app_main(void)
 
     // Start xiaozhi, never returns
     GetHAL().startXiaozhi();
+#endif
 }

@@ -32,3 +32,18 @@ ctest --test-dir build-host-tests --output-on-failure
 ```bash
 idf.py flash
 ```
+
+## Custom Pet Base image
+
+The custom pet work uses its own build directory and generated `sdkconfig`.
+It boots only `AppPetBase`: no launcher and no XiaoZhi assistant loop.
+
+```bash
+./tools/pet_firmware_base.sh build
+./tools/pet_firmware_base.sh -p /dev/ttyACM0 flash monitor
+```
+
+This is deliberately transitional. The app itself has no XiaoZhi headers, but
+hardware bring-up still uses the existing XiaoZhi board component. The next
+base-layer milestones extract display, audio, touch, IMU, LEDs, servos, and
+NVS behind the custom `hal/` boundary.

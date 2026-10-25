@@ -1,3 +1,15 @@
+menu "Pet Firmware"
+
+config STACKCHAN_MINIMAL_PET_BASE
+    bool "Boot the custom pet base app only"
+    default n
+    help
+        Start the custom Pet Base app after hardware initialization and never
+        enter the XiaoZhi application loop. This is the transitional base
+        layer while StackChan board support is extracted from XiaoZhi.
+
+endmenu
+
 menu "StackChan Server"
 
 config STACKCHAN_SERVER_URL

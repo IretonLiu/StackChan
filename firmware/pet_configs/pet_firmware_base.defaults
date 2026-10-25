@@ -1,0 +1,3 @@
+# Custom pet-base image. Applied by tools/pet_firmware_base.sh only.
+# Do not add this to sdkconfig.defaults: stock StackChan builds must stay intact.
+CONFIG_STACKCHAN_MINIMAL_PET_BASE=y
