@@ -5,3 +5,8 @@ CONFIG_STACKCHAN_MINIMAL_PET_BASE=y
 CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME=n
 # Pet Base has no assistant assets or wake model to package or flash.
 CONFIG_FLASH_NONE_ASSETS=y
+# Render Pet expressions from smooth vector paths, not coarse line segments.
+CONFIG_LV_USE_VECTOR_GRAPHIC=y
+# LVGL's software vector backend uses the bundled ThorVG implementation.
+CONFIG_LV_USE_THORVG=y
+CONFIG_LV_USE_THORVG_INTERNAL=y

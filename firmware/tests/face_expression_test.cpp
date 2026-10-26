@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <pet/face/face.h>
+#include <pet/face/glyph_paths.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -34,6 +35,15 @@ float difference(const FacePose& left, const FacePose& right)
            std::fabs(left.mouth.curve_depth - right.mouth.curve_depth) +
            std::fabs(left.mouth.openness - right.mouth.openness) +
            std::fabs(left.accent_intensity - right.accent_intensity) + std::fabs(left.visual_tilt - right.visual_tilt);
+}
+
+void testIdleUsesFirstReferenceFace()
+{
+    const FacePose idle = pet::face::preset(ExpressionId::Idle);
+    expect(idle.left_eye.glyph == pet::face::EyeGlyph::Stroke && idle.right_eye.glyph == pet::face::EyeGlyph::Stroke,
+           "the default face uses the reference's calm horizontal eyes");
+    expect(idle.mouth.glyph == pet::face::MouthGlyph::W && idle.mouth.center.y == 125.0f && idle.mouth.width == 48.0f,
+           "the default face uses the user-authored R1 C1 double-curve mouth");
 }
 
 void testAllSemanticPresetsProduceSafeGeometry()
@@ -92,13 +102,35 @@ void testSleepingFaceCannotBeOpenedByBlinkOverlay()
     }
 }
 
+void testSharedDrawingIsBoundedAndUsesCubicCurves()
+{
+    bool found_cubic = false;
+    for (ExpressionId expression : {ExpressionId::Happy, ExpressionId::Excited, ExpressionId::Lonely,
+                                    ExpressionId::Sleepy, ExpressionId::Startled}) {
+        const pet::face::FaceDrawing drawing = pet::face::buildFaceDrawing(pet::face::preset(expression));
+        expect(drawing.path_count > 0 && drawing.path_count <= pet::face::kMaxFacePaths,
+               "shared drawing has a bounded number of paths");
+        for (uint8_t path_index = 0; path_index < drawing.path_count; ++path_index) {
+            const pet::face::FacePath& path = drawing.paths[path_index];
+            expect(path.command_count > 0 && path.command_count <= pet::face::kMaxPathCommands,
+                   "shared drawing has bounded path commands");
+            for (uint8_t command_index = 0; command_index < path.command_count; ++command_index) {
+                found_cubic |= path.commands[command_index].type == pet::face::PathCommandType::Cubic;
+            }
+        }
+    }
+    expect(found_cubic, "shared drawing emits smooth cubic Bezier commands");
+}
+
 }  // namespace
 
 int main()
 {
+    testIdleUsesFirstReferenceFace();
     testAllSemanticPresetsProduceSafeGeometry();
     testInterruptedTransitionStartsFromCurrentPose();
     testSameSeedAndTimelineAreReproducible();
     testSleepingFaceCannotBeOpenedByBlinkOverlay();
+    testSharedDrawingIsBoundedAndUsesCubicCurves();
     return 0;
 }

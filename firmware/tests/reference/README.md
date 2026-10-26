@@ -18,6 +18,9 @@ shape-by-shape approximation; the original image above remains authoritative.
 
 Open `face_editor.html` in a modern desktop browser. Select a crop, add a
 Bézier curve, ellipse, or polygon, then drag its on-canvas control points over
-the semi-transparent reference. Download the clean SVG or save it directly into
-a folder (Chrome/Edge). Shape drafts and completion marks are kept in browser
+the semi-transparent reference. Every untouched face begins with the
+user-authored R1 C1 base, retained exactly at `templates/r1-c1-base.svg`, so
+new work starts from the approved stroke weight, eye placement, and mouth
+rather than an empty canvas. Download the clean SVG or save it directly into a
+folder (Chrome/Edge). Shape drafts and completion marks are kept in browser
 local storage, so face work can proceed one at a time.

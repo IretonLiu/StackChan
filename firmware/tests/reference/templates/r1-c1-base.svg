@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <rect width="320" height="240" fill="#000"/>
+  <!-- Add only SVG shapes inside this area. -->
+<path d="M 68 103 H 120 M 200 103 H 252"
+      fill="none" stroke="#f8f5ed" stroke-width="6"
+      stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 136 125 C 148 139 154 137 160 125 C 170 130 172 139 184 125"
+      fill="none" stroke="#f8f5ed" stroke-width="6"
+      stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -35,7 +35,7 @@ FacePose neutralPose()
     return {
         .left_eye  = {{94.0f, 103.0f}, {51.0f, 12.0f}, 0.0f, 1.0f, EyeGlyph::Stroke, EyeGlyph::Stroke, 1.0f},
         .right_eye = {{226.0f, 103.0f}, {51.0f, 12.0f}, 0.0f, 1.0f, EyeGlyph::Stroke, EyeGlyph::Stroke, 1.0f},
-        .mouth     = {{160.0f, 158.0f}, 35.0f, 5.0f, 5.0f, 0.0f, MouthGlyph::TinyArc, MouthGlyph::TinyArc, 1.0f},
+        .mouth     = {{160.0f, 125.0f}, 48.0f, 0.0f, 6.0f, 0.0f, MouthGlyph::W, MouthGlyph::W, 1.0f},
         .palette   = {{0, 0, 0}, {246, 244, 236}, {246, 244, 236}},
         .accent_mark      = AccentMark::None,
         .accent_intensity = 0.0f,
@@ -92,7 +92,8 @@ FacePose preset(ExpressionId expression, float intensity)
 
     switch (expression) {
         case ExpressionId::Idle:
-            target.mouth.curve_depth = 8.0f;
+            // The first reference-sheet face: calm horizontal eyes and a
+            // compact double-curve mouth.
             break;
         case ExpressionId::Curious:
             setBothEyes(target, EyeGlyph::Circle, {34.0f, 34.0f});

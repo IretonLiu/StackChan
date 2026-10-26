@@ -37,6 +37,7 @@ enum class MouthGlyph : uint8_t {
     Three,
     ZigZag,
     TinyArc,
+    W,
 };
 
 enum class AccentMark : uint8_t {

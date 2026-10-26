@@ -33,6 +33,7 @@ add_test(NAME pet_hardware_policy_test COMMAND $<TARGET_FILE:pet_hardware_policy
 add_executable(face_expression_test
     face_expression_test.cpp
     ../main/pet/face/face.cpp
+    ../main/pet/face/glyph_paths.cpp
 )
 
 target_include_directories(face_expression_test PRIVATE
@@ -47,6 +48,7 @@ add_executable(face_preview
     face_preview.cpp
     face_svg_renderer.cpp
     ../main/pet/face/face.cpp
+    ../main/pet/face/glyph_paths.cpp
 )
 
 target_include_directories(face_preview PRIVATE

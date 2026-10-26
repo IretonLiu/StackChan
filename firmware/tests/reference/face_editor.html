@@ -49,7 +49,7 @@ aside, section { padding:15px; border-right:1px solid var(--line); } section:las
 <script>
 (() => {
 'use strict';
-const NS='http://www.w3.org/2000/svg', INK='#f8f5ed', STORE='stackchan-face-path-editor-v2:';
+const NS='http://www.w3.org/2000/svg', INK='#f8f5ed', STORE='stackchan-face-path-editor-v3:';
 const faces=Array.from({length:24},(_,i)=>({row:Math.floor(i/3)+1,col:i%3+1}));
 const $=selector=>document.querySelector(selector);
 const el={faces:$('#faces'), stage:$('#stage'), title:$('#title'), list:$('#shape-list'), inspector:$('#inspector'), opacity:$('#opacity'), opacityLabel:$('#opacity-label'), complete:$('#complete'), source:$('#source'), status:$('#status')};
@@ -64,10 +64,12 @@ const point=(x,y)=>({x,y});
 const seed=()=>({shapes:[
   {type:'curve',stroke:6,fill:false,closed:false,start:point(68,103),segments:[{c1:point(85,103),c2:point(103,103),end:point(120,103)}]},
   {type:'curve',stroke:6,fill:false,closed:false,start:point(200,103),segments:[{c1:point(217,103),c2:point(235,103),end:point(252,103)}]},
-  {type:'curve',stroke:6,fill:false,closed:false,start:point(142,155),segments:[{c1:point(148,169),c2:point(154,167),end:point(160,155)},{c1:point(166,167),c2:point(172,169),end:point(178,155)}]}
+  {type:'curve',stroke:6,fill:false,closed:false,start:point(136,125),segments:[{c1:point(148,139),c2:point(154,137),end:point(160,125)},{c1:point(170,130),c2:point(172,139),end:point(184,125)}]}
 ]});
 const empty=()=>({shapes:[]});
-function load(face){const raw=localStorage.getItem(key(face)); return raw?JSON.parse(raw):(face.row===1&&face.col===1?seed():empty());}
+// Every untouched reference face starts from the user-authored R1 C1 base.
+// Its curves are then adjusted rather than redrawn from an empty canvas.
+function load(face){const raw=localStorage.getItem(key(face)); return raw?JSON.parse(raw):clone(seed());}
 function save(){localStorage.setItem(key(current),JSON.stringify(model));}
 function selectedShape(){return model.shapes[selected]||null;}
 function pathData(shape){let d=`M ${n(shape.start.x)} ${n(shape.start.y)}`;for(const segment of shape.segments)d+=` C ${n(segment.c1.x)} ${n(segment.c1.y)} ${n(segment.c2.x)} ${n(segment.c2.y)} ${n(segment.end.x)} ${n(segment.end.y)}`;return shape.closed?d+' Z':d;}
