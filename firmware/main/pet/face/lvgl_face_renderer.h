@@ -3,7 +3,7 @@
  */
 #pragma once
 
-#include "face.h"
+#include "glyph_paths.h"
 
 #include <lvgl.h>
 
@@ -19,6 +19,7 @@ public:
     LvglFaceRenderer& operator=(const LvglFaceRenderer&) = delete;
 
     void render(const FacePose& pose);
+    void render(const FaceDrawing& drawing);
 
 private:
     static lv_color_t toLvColor(Color color);

@@ -7,7 +7,31 @@
 #include <hal/hal.h>
 #include <stackchan/stackchan.h>
 
+#include <atomic>
+
 namespace {
+
+std::atomic_bool s_head_pet{false};
+std::atomic_bool s_shake{false};
+bool s_input_bridge_installed = false;
+
+void installInputBridge()
+{
+    if (s_input_bridge_installed) {
+        return;
+    }
+    s_input_bridge_installed = true;
+    GetHAL().onHeadPetGesture.connect([](HeadPetGesture gesture) {
+        if (gesture == HeadPetGesture::SwipeForward || gesture == HeadPetGesture::SwipeBackward) {
+            s_head_pet.store(true, std::memory_order_release);
+        }
+    });
+    GetHAL().onImuMotionEvent.connect([](ImuMotionEvent event) {
+        if (event == ImuMotionEvent::Shake) {
+            s_shake.store(true, std::memory_order_release);
+        }
+    });
+}
 
 class StackChanSafeIdlePort final : public PetSafeIdlePort {
 public:
@@ -28,6 +52,7 @@ public:
 void PetHardware::initialize()
 {
     GetHAL().init();
+    installInputBridge();
 }
 
 void PetHardware::delay(uint32_t milliseconds)
@@ -54,6 +79,16 @@ void PetHardware::enterSafeIdle(uint32_t status_light_rgb)
 void PetHardware::update()
 {
     GetStackChan().update();
+}
+
+bool PetHardware::consumeHeadPet()
+{
+    return s_head_pet.exchange(false, std::memory_order_acq_rel);
+}
+
+bool PetHardware::consumeShake()
+{
+    return s_shake.exchange(false, std::memory_order_acq_rel);
 }
 
 PetHardware::DisplayLock::DisplayLock()

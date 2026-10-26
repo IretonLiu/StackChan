@@ -42,8 +42,8 @@ void AppPetBase::onOpen()
 
     _face_renderer = std::make_unique<pet::face::LvglFaceRenderer>(_panel->get());
     const uint32_t now = PetHardware::millis();
-    _face_controller.request(pet::face::ExpressionId::Idle, 1.0f, pet::face::Transition{220}, now);
-    _face_renderer->render(_face_controller.sample(now));
+    _face_animator.reset(now);
+    _face_renderer->render(_face_animator.sample(now));
 
     // This image is a safe, inert starting point: no autonomous servo motion
     // until the behaviour layer owns it.
@@ -55,9 +55,16 @@ void AppPetBase::onOpen()
 void AppPetBase::onRunning()
 {
     const uint32_t now = PetHardware::millis();
+    if (PetHardware::consumeHeadPet()) {
+        _face_animator.onPetted(now);
+    }
+    if (PetHardware::consumeShake()) {
+        _face_animator.onShaken(now);
+    }
+
     if (now - _last_face_update_ms >= kFaceUpdateIntervalMs) {
         PetHardware::DisplayLock lock;
-        _face_renderer->render(_face_controller.sample(now));
+        _face_renderer->render(_face_animator.sample(now));
         _last_face_update_ms = now;
     }
 

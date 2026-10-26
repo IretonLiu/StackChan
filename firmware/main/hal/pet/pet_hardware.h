@@ -28,6 +28,11 @@ public:
     // Advance pet-owned visual effects. This does not authorize servo motion.
     static void update();
 
+    // Consume events from the retained board touch/IMU detectors. Pet apps do
+    // not access inherited Hal signals directly.
+    static bool consumeHeadPet();
+    static bool consumeShake();
+
     class DisplayLock {
     public:
         DisplayLock();

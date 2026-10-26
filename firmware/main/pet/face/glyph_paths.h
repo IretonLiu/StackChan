@@ -34,7 +34,7 @@ struct PathStyle {
 };
 
 constexpr size_t kMaxPathCommands = 12;
-constexpr size_t kMaxFacePaths = 8;
+constexpr size_t kMaxFacePaths = 16;
 
 struct FacePath {
     PathStyle style{};

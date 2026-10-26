@@ -56,6 +56,7 @@ class PetBaseBuildContractTest(unittest.TestCase):
             "/hal/pet/pet_hardware.cpp",
             "/hal/pet/pet_hardware_policy.cpp",
             "/pet/face/face.cpp",
+            "/pet/face/face_animation.cpp",
             "/pet/face/lvgl_face_renderer.cpp",
             "/hal/board/stackchan_camera.cc",
             "/hal/board/stackchan_display.cc",

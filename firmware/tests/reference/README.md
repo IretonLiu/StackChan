@@ -31,3 +31,16 @@ display's vertical centre line, which is useful after duplicating an eye.
 Curves may contain both Bézier and straight line segments. Shape drafts and
 completion marks are kept in browser local storage, so face work can proceed
 one at a time.
+
+## Authored runtime states
+
+The completed SVG exports have been preserved under `authored/` and are used as
+the source geometry for the first procedural runtime rig:
+
+- `idle.svg` — latest R1 C1
+- `mischievous.svg` — R3 C1
+- `happy.svg` — R6 C1
+- `dizzy.svg` — R6 C2
+
+The firmware converts their paths to bounded renderer-neutral commands in
+`main/pet/face/face_animation.cpp`; it does not load SVG files on the device.

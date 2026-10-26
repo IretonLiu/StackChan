@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <rect width="320" height="240" fill="#000"/>
+  <path data-shape="0" class="" d="M 136 125 C 148 139 154 137 160 125 C 170 130 172 139 184 125" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="1" class="" d="M 227.3 116.3 L 196.5 104.9" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="2" class="" d="M 90 116.9 L 120.8 105.6" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="3" class="" d="M 230.3 102.4 L 199.9 104.1" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="4" class="" d="M 89.5 103 L 119.9 104.7" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="5" class="" d="M 228.2 87.6 L 196.1 104.1" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="6" class="" d="M 88.3 88.7 L 120.3 105.1" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="7" class="" d="M 51.3 130.7 L 66.9 118.9" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="8" class="" d="M 266.6 131.5 L 255.4 121.2" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="9" class="" d="M 64 133.7 L 79.6 121" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="10" class="" d="M 255.2 132 L 243.6 122.9" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="11" class="" d="M 81 135.5 L 85.9 124.8" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="12" class="" d="M 240.9 134 L 236 123.3" fill="none" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path data-shape="13" class="" d="M 227.3 53 C 213.8 29.4 209.2 60.6 220.6 71.6 C 246.8 63.6 250.6 49.6 226.9 53 Z" fill="#f8f5ed" stroke="#f8f5ed" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

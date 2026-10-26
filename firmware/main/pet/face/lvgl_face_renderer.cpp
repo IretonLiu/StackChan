@@ -75,7 +75,11 @@ LvglFaceRenderer::~LvglFaceRenderer()
 
 void LvglFaceRenderer::render(const FacePose& pose)
 {
-    const FaceDrawing drawing = buildFaceDrawing(pose);
+    render(buildFaceDrawing(pose));
+}
+
+void LvglFaceRenderer::render(const FaceDrawing& drawing)
+{
     lv_canvas_fill_bg(canvas_, toLvColor(drawing.background), LV_OPA_COVER);
 
 #if LV_USE_VECTOR_GRAPHIC

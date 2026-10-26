@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <pet/face/face.h>
+#include <pet/face/face_animation.h>
 #include <pet/face/glyph_paths.h>
 
 #include <cmath>
@@ -102,6 +103,30 @@ void testSleepingFaceCannotBeOpenedByBlinkOverlay()
     }
 }
 
+void testPetFaceAnimatorRespondsToStateIntents()
+{
+    pet::face::PetFaceAnimator animator(123);
+    animator.reset(0);
+    const pet::face::FaceDrawing idle_start = animator.sample(0);
+    const pet::face::FaceDrawing idle_breath = animator.sample(650);
+    expect(animator.state() == pet::face::PetFaceState::Idle, "the face animator begins in idle");
+    expect(idle_start.paths[2].commands[0].first.y != idle_breath.paths[2].commands[0].first.y,
+           "idle animation moves its mouth procedurally");
+
+    animator.onPetted(700);
+    expect(animator.state() == pet::face::PetFaceState::Happy, "a pet intent selects the happy state");
+    const pet::face::FaceDrawing happy_first = animator.sample(700);
+    const pet::face::FaceDrawing happy_later = animator.sample(900);
+    expect(happy_first.paths[7].commands[0].first.x != happy_later.paths[7].commands[0].first.x,
+           "happy animation moves the blush paths");
+    animator.onShaken(950);
+    expect(animator.state() == pet::face::PetFaceState::Dizzy, "a shake intent overrides happy with dizzy");
+    const pet::face::FaceDrawing dizzy_first = animator.sample(950);
+    const pet::face::FaceDrawing dizzy_later = animator.sample(1200);
+    expect(dizzy_first.paths[0].commands[0].first.x != dizzy_later.paths[0].commands[0].first.x,
+           "dizzy animation rotates the eye path");
+}
+
 void testSharedDrawingIsBoundedAndUsesCubicCurves()
 {
     bool found_cubic = false;
@@ -131,6 +156,7 @@ int main()
     testInterruptedTransitionStartsFromCurrentPose();
     testSameSeedAndTimelineAreReproducible();
     testSleepingFaceCannotBeOpenedByBlinkOverlay();
+    testPetFaceAnimatorRespondsToStateIntents();
     testSharedDrawingIsBoundedAndUsesCubicCurves();
     return 0;
 }
