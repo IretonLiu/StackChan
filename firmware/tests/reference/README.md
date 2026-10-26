@@ -16,7 +16,8 @@ shape-by-shape approximation; the original image above remains authoritative.
 
 ## Local tracing editor
 
-Open `face_editor.html` in a modern desktop browser. Select a crop, trace SVG
-marks over its semi-transparent reference, then download the clean SVG or save
-it directly into a folder (Chrome/Edge). Draft markup and completion marks are
-kept in browser local storage, so face work can proceed one at a time.
+Open `face_editor.html` in a modern desktop browser. Select a crop, add a
+Bézier curve, ellipse, or polygon, then drag its on-canvas control points over
+the semi-transparent reference. Download the clean SVG or save it directly into
+a folder (Chrome/Edge). Shape drafts and completion marks are kept in browser
+local storage, so face work can proceed one at a time.

@@ -3,175 +3,105 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>StackChan Face Reference Editor</title>
+<title>StackChan Face Path Editor</title>
 <style>
-  :root { color-scheme: dark; --ink:#f8f5ed; --panel:#161616; --line:#363636; --accent:#8cc8ff; --done:#75d69a; }
-  * { box-sizing: border-box; }
-  body { margin:0; min-height:100vh; background:#0a0a0a; color:var(--ink); font:14px/1.4 system-ui,sans-serif; }
-  header { padding:16px 20px; border-bottom:1px solid var(--line); background:#111; }
-  h1 { margin:0; font-size:20px; } header p { margin:5px 0 0; color:#bbb; }
-  main { display:grid; grid-template-columns:224px minmax(350px, 1fr) minmax(300px, .9fr); min-height:calc(100vh - 82px); }
-  aside, section { padding:16px; border-right:1px solid var(--line); } section:last-child { border:0; }
-  h2 { font-size:14px; margin:0 0 10px; color:#bbb; text-transform:uppercase; letter-spacing:.06em; }
-  .faces { display:grid; grid-template-columns:repeat(3, 1fr); gap:7px; }
-  .face { position:relative; padding:0; border:1px solid #333; background:#000; cursor:pointer; aspect-ratio:2/1; }
-  .face:hover, .face.selected { border-color:var(--accent); outline:1px solid var(--accent); }
-  .face.done::after { content:"✓"; position:absolute; right:2px; top:0; color:#061108; background:var(--done); border-radius:50%; width:17px; height:17px; font-weight:bold; }
-  .face img { width:100%; height:100%; object-fit:cover; display:block; }
-  .canvas-wrap { background:#000; border:1px solid #333; max-width:720px; margin:auto; }
-  #stage { display:block; width:100%; height:auto; aspect-ratio:4/3; }
-  .controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
-  button, input { font:inherit; } button { padding:7px 10px; border:1px solid #444; color:var(--ink); background:#242424; border-radius:4px; cursor:pointer; }
-  button:hover { border-color:var(--accent); background:#303030; } button.primary { border-color:#477da7; background:#1d496a; }
-  label { display:flex; align-items:center; gap:7px; color:#bbb; } input[type=range] { accent-color:var(--accent); }
-  textarea { display:block; width:100%; min-height:350px; resize:vertical; border:1px solid #444; border-radius:4px; padding:12px; background:#0b0b0b; color:#e8e8e8; font:13px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:2; }
-  .hint { margin:10px 0; color:#aaa; } code { color:#c3e4ff; } .status { min-height:20px; color:var(--done); margin-top:10px; }
-  .small { font-size:12px; color:#999; } .complete { margin-top:15px; }
-  @media (max-width: 1000px) { main { grid-template-columns:190px 1fr; } .editor { grid-column:1/-1; border-top:1px solid var(--line); } }
-  @media (max-width: 640px) { main { display:block; } aside, section { border-right:0; border-bottom:1px solid var(--line); } }
+:root { color-scheme:dark; --ink:#f8f5ed; --panel:#151515; --line:#373737; --blue:#8ecbff; --orange:#ffc879; --green:#76d99d; }
+* { box-sizing:border-box; } body { margin:0; background:#090909; color:var(--ink); font:14px/1.4 system-ui,sans-serif; }
+header { padding:15px 20px; border-bottom:1px solid var(--line); background:#111; } h1 { margin:0; font-size:20px; } header p { margin:4px 0 0; color:#aaa; }
+main { min-height:calc(100vh - 80px); display:grid; grid-template-columns:210px minmax(420px,1fr) 310px; }
+aside, section { padding:15px; border-right:1px solid var(--line); } section:last-child { border-right:0; } h2 { margin:0 0 9px; color:#bdbdbd; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+.faces { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }.face { position:relative; border:1px solid #383838; padding:0; background:#000; cursor:pointer; aspect-ratio:2/1; }.face:hover,.face.selected { border-color:var(--blue); outline:1px solid var(--blue); }.face.done::after { content:'✓'; position:absolute; top:1px; right:1px; width:17px; height:17px; border-radius:50%; background:var(--green); color:#061108; font-weight:800; }.face img { display:block; width:100%; height:100%; object-fit:cover; }
+.canvas { max-width:760px; margin:auto; background:#000; border:1px solid #3b3b3b; }.canvas svg { display:block; width:100%; aspect-ratio:4/3; touch-action:none; }.toolbar,.actions { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-top:11px; }button,input { font:inherit; }button { padding:7px 9px; color:var(--ink); border:1px solid #484848; border-radius:4px; background:#252525; cursor:pointer; }button:hover { border-color:var(--blue); background:#303030; }button.primary { background:#1d4a6d; border-color:#578eb8; }button.danger { color:#ffadad; }label { display:flex; align-items:center; gap:6px; color:#bbb; }input[type=range] { accent-color:var(--blue); }input[type=number] { width:74px; padding:5px; color:var(--ink); border:1px solid #444; border-radius:3px; background:#0b0b0b; }.hint,.small { color:#aaa; }.small { font-size:12px; }.status { min-height:21px; margin-top:10px; color:var(--green); }.shape-list { display:grid; gap:5px; margin-bottom:14px; }.shape { width:100%; text-align:left; }.shape.selected { border-color:var(--blue); background:#183449; }.inspector { padding-top:12px; border-top:1px solid var(--line); }.row { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin:8px 0; }.handle-line { stroke:var(--orange); stroke-width:1.2; opacity:.85; }.anchor { fill:var(--blue); stroke:#002945; stroke-width:1; cursor:grab; }.control { fill:var(--orange); stroke:#523300; stroke-width:1; cursor:grab; }.shape-hit { cursor:pointer; }.selected-art { filter:drop-shadow(0 0 2px #7ac7ff); }details { margin-top:15px; }pre { overflow:auto; max-height:240px; padding:10px; background:#0b0b0b; border:1px solid #333; white-space:pre-wrap; color:#cce8ff; }code { color:#cce8ff; }
+@media(max-width:1050px){main{grid-template-columns:190px 1fr}.editor{grid-column:1/-1;border-top:1px solid var(--line)}}@media(max-width:620px){main{display:block}aside,section{border-right:0;border-bottom:1px solid var(--line)}}
 </style>
 </head>
 <body>
-<header>
-  <h1>StackChan face reference editor</h1>
-  <p>Trace each supplied face as clean SVG paths. Drafts stay in this browser until exported.</p>
-</header>
+<header><h1>StackChan face path editor</h1><p>Select a reference face, add shapes, then drag the blue anchors and amber Bézier controls directly on the canvas.</p></header>
 <main>
-  <aside>
-    <h2>Reference faces</h2>
-    <div id="faces" class="faces"></div>
-    <div class="complete"><label><input id="complete" type="checkbox"> Mark this face complete</label></div>
-    <p class="small">Faces are numbered in the reference image's original 3 × 8 order.</p>
-  </aside>
-
-  <section>
-    <h2 id="face-title">Face R1 C1</h2>
-    <div class="canvas-wrap"><svg id="stage" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg"></svg></div>
-    <div class="controls">
-      <label>Reference <input id="opacity" type="range" min="0" max="100" value="45"> <output id="opacity-value">45%</output></label>
-      <button id="toggle-reference">Hide reference</button>
-      <button id="clear">Clear vector</button>
-      <button id="seed">Load first-face seed</button>
-    </div>
-    <p class="hint">The reference is proportionally scaled to <code>320 × 160</code> and centered vertically in the <code>320 × 240</code> StackChan frame. Your white paths overlay it.</p>
-  </section>
-
-  <section class="editor">
-    <h2>SVG marks</h2>
-    <textarea id="markup" spellcheck="false" aria-label="SVG mark editor"></textarea>
-    <div class="controls">
-      <button id="add-path">Add path</button>
-      <button id="add-circle">Add circle</button>
-      <button id="add-ellipse">Add ellipse</button>
-      <button class="primary" id="download-svg">Download SVG</button>
-      <button id="download-html">Download HTML</button>
-      <button id="save-folder">Save to folder</button>
-      <button id="copy">Copy SVG</button>
-    </div>
-    <p class="small">Use <code>stroke="#f8f5ed"</code>, rounded caps/joins, and <code>fill="#f8f5ed"</code> for solid marks. “Save to folder” uses Chrome/Edge's folder picker; downloads work everywhere.</p>
-    <div id="status" class="status" role="status"></div>
-  </section>
+<aside>
+  <h2>Reference faces</h2><div class="faces" id="faces"></div>
+  <p><label><input id="complete" type="checkbox"> Mark selected face complete</label></p>
+  <p class="small">The order matches the supplied 3 × 8 reference. R1 C1 is the upper-left default.</p>
+</aside>
+<section>
+  <h2 id="title">Face R1 C1</h2>
+  <div class="canvas"><svg id="stage" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" aria-label="Face path editor canvas"></svg></div>
+  <div class="toolbar">
+    <button id="new-curve">New Bézier curve</button><button id="new-ellipse">New ellipse</button><button id="new-polygon">New polygon</button><button id="add-segment">Add curve segment</button><button id="delete" class="danger">Delete shape</button>
+  </div>
+  <div class="toolbar">
+    <label>Reference <input id="opacity" type="range" min="0" max="100" value="48"><output id="opacity-label">48%</output></label>
+    <button id="reference">Hide reference</button><button id="clear">Clear this face</button>
+  </div>
+  <p class="hint">The crop is scaled proportionally to <code>320 × 160</code> and centered in the device's <code>320 × 240</code> display. Drag handles; changes are saved as local browser drafts automatically.</p>
+</section>
+<section class="editor">
+  <h2>Shapes</h2><div id="shape-list" class="shape-list"></div>
+  <div class="inspector" id="inspector"></div>
+  <div class="actions">
+    <button id="copy">Copy SVG</button><button id="download" class="primary">Download SVG</button><button id="download-html">Download HTML</button><button id="save-folder">Save to folder</button>
+  </div>
+  <p class="small">Curves expose blue endpoint anchors and amber control points. Ellipses expose centre, horizontal-radius, and vertical-radius handles. Polygons expose draggable vertices.</p>
+  <div id="status" class="status" role="status"></div>
+  <details><summary>Generated SVG source</summary><pre id="source"></pre></details>
+</section>
 </main>
-
 <script>
 (() => {
-  const root = 'individual';
-  const storePrefix = 'stackchan-face-editor-v1:';
-  const faces = Array.from({length: 24}, (_, i) => ({ row: Math.floor(i / 3) + 1, col: (i % 3) + 1 }));
-  const el = {
-    faces: document.querySelector('#faces'), stage: document.querySelector('#stage'), title: document.querySelector('#face-title'),
-    markup: document.querySelector('#markup'), opacity: document.querySelector('#opacity'), opacityValue: document.querySelector('#opacity-value'),
-    toggle: document.querySelector('#toggle-reference'), complete: document.querySelector('#complete'), status: document.querySelector('#status')
-  };
-  let current = faces[0];
-  let showReference = true;
-
-  const idFor = face => `r${face.row}-c${face.col}`;
-  const refFor = face => `${root}/row-${face.row}-col-${face.col}.png`;
-  const keyFor = face => storePrefix + idFor(face);
-  const doneKey = face => keyFor(face) + ':done';
-  const defaultMarks = `<!-- Add only SVG shapes inside this area. -->\n<path d="M 68 103 H 120 M 200 103 H 252"\n      fill="none" stroke="#f8f5ed" stroke-width="6"\n      stroke-linecap="round" stroke-linejoin="round"/>\n<path d="M 142 155 C 148 169 154 167 160 155 C 166 167 172 169 178 155"\n      fill="none" stroke="#f8f5ed" stroke-width="6"\n      stroke-linecap="round" stroke-linejoin="round"/>`;
-  const blankMarks = `<!-- Example:\n<path d="M 80 100 C 95 120 115 120 130 100" fill="none" stroke="#f8f5ed" stroke-width="7" stroke-linecap="round"/>\n-->`;
-
-  function escapeText(text) {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-  function marks() { return el.markup.value; }
-  function render() {
-    const opacity = showReference ? Number(el.opacity.value) / 100 : 0;
-    el.opacityValue.value = `${el.opacity.value}%`;
-    el.stage.innerHTML = `
-      <rect width="320" height="240" fill="#000"/>
-      <image href="${refFor(current)}" x="0" y="40" width="320" height="160" opacity="${opacity}" preserveAspectRatio="none"/>
-      <g id="vector-marks">${marks()}</g>`;
-    localStorage.setItem(keyFor(current), marks());
-    renderFaceButtons();
-  }
-  function vectorSvg() {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">\n  <rect width="320" height="240" fill="#000"/>\n  ${marks()}\n</svg>\n`;
-  }
-  function filename(extension) { return `stackchan-face-r${current.row}-c${current.col}.${extension}`; }
-  function download(name, content, type) {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([content], {type}));
-    link.download = name;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-  }
-  function standaloneHtml() {
-    return `<!doctype html><meta charset="utf-8"><title>${filename('svg')}</title><style>body{margin:0;background:#000;display:grid;place-items:center;height:100vh}svg{max-width:100vw;max-height:100vh}</style>${vectorSvg()}`;
-  }
-  function status(message) { el.status.textContent = message; setTimeout(() => { if (el.status.textContent === message) el.status.textContent = ''; }, 4000); }
-  function select(face) {
-    current = face;
-    el.title.textContent = `Face R${face.row} C${face.col}`;
-    el.markup.value = localStorage.getItem(keyFor(face)) ?? (face.row === 1 && face.col === 1 ? defaultMarks : blankMarks);
-    el.complete.checked = localStorage.getItem(doneKey(face)) === 'true';
-    render();
-  }
-  function renderFaceButtons() {
-    el.faces.innerHTML = '';
-    for (const face of faces) {
-      const button = document.createElement('button');
-      button.className = 'face' + (idFor(face) === idFor(current) ? ' selected' : '') +
-        (localStorage.getItem(doneKey(face)) === 'true' ? ' done' : '');
-      button.title = `Face R${face.row} C${face.col}`;
-      button.innerHTML = `<img src="${refFor(face)}" alt="Reference face row ${face.row}, column ${face.col}">`;
-      button.addEventListener('click', () => select(face));
-      el.faces.appendChild(button);
-    }
-  }
-  function append(snippet) {
-    const prefix = marks().trim() && !marks().trim().startsWith('<!-- Example') ? '\n\n' : '';
-    el.markup.value = (marks().trim().startsWith('<!-- Example') ? '' : marks()) + prefix + snippet;
-    render(); el.markup.focus(); el.markup.setSelectionRange(el.markup.value.length, el.markup.value.length);
-  }
-
-  el.markup.addEventListener('input', render);
-  el.opacity.addEventListener('input', render);
-  el.toggle.addEventListener('click', () => { showReference = !showReference; el.toggle.textContent = showReference ? 'Hide reference' : 'Show reference'; render(); });
-  el.complete.addEventListener('change', () => { localStorage.setItem(doneKey(current), el.complete.checked); renderFaceButtons(); });
-  document.querySelector('#clear').addEventListener('click', () => { el.markup.value = blankMarks; render(); });
-  document.querySelector('#seed').addEventListener('click', () => { el.markup.value = defaultMarks; render(); });
-  document.querySelector('#add-path').addEventListener('click', () => append('<path d="M 80 120 C 105 90 135 150 160 120" fill="none" stroke="#f8f5ed" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'));
-  document.querySelector('#add-circle').addEventListener('click', () => append('<circle cx="100" cy="105" r="16" fill="none" stroke="#f8f5ed" stroke-width="6"/>'));
-  document.querySelector('#add-ellipse').addEventListener('click', () => append('<ellipse cx="160" cy="155" rx="18" ry="12" fill="none" stroke="#f8f5ed" stroke-width="6"/>'));
-  document.querySelector('#download-svg').addEventListener('click', () => { download(filename('svg'), vectorSvg(), 'image/svg+xml'); status(`Downloaded ${filename('svg')}`); });
-  document.querySelector('#download-html').addEventListener('click', () => { download(filename('html'), standaloneHtml(), 'text/html'); status(`Downloaded ${filename('html')}`); });
-  document.querySelector('#copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(vectorSvg()); status('SVG copied to clipboard.'); } catch { status('Clipboard permission was denied. Use Download SVG instead.'); } });
-  document.querySelector('#save-folder').addEventListener('click', async () => {
-    if (!window.showDirectoryPicker) { status('Folder saving is unavailable here; use Download SVG.'); return; }
-    try {
-      const directory = await window.showDirectoryPicker({mode: 'readwrite'});
-      const handle = await directory.getFileHandle(filename('svg'), {create: true});
-      const writable = await handle.createWritable();
-      await writable.write(vectorSvg()); await writable.close();
-      status(`Saved ${filename('svg')} to the selected folder.`);
-    } catch (error) { if (error.name !== 'AbortError') status(`Could not save: ${error.message}`); }
-  });
-  window.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); download(filename('svg'), vectorSvg(), 'image/svg+xml'); status(`Downloaded ${filename('svg')}`); } });
-
-  select(current);
+'use strict';
+const NS='http://www.w3.org/2000/svg', INK='#f8f5ed', STORE='stackchan-face-path-editor-v2:';
+const faces=Array.from({length:24},(_,i)=>({row:Math.floor(i/3)+1,col:i%3+1}));
+const $=selector=>document.querySelector(selector);
+const el={faces:$('#faces'), stage:$('#stage'), title:$('#title'), list:$('#shape-list'), inspector:$('#inspector'), opacity:$('#opacity'), opacityLabel:$('#opacity-label'), complete:$('#complete'), source:$('#source'), status:$('#status')};
+let current=faces[0], model, selected=0, showReference=true, drag=null;
+const clone=value=>JSON.parse(JSON.stringify(value));
+const id=face=>`r${face.row}-c${face.col}`;
+const key=face=>STORE+id(face);
+const doneKey=face=>key(face)+':done';
+const reference=face=>`individual/row-${face.row}-col-${face.col}.png`;
+const n=value=>Math.round(value*10)/10;
+const point=(x,y)=>({x,y});
+const seed=()=>({shapes:[
+  {type:'curve',stroke:6,fill:false,closed:false,start:point(68,103),segments:[{c1:point(85,103),c2:point(103,103),end:point(120,103)}]},
+  {type:'curve',stroke:6,fill:false,closed:false,start:point(200,103),segments:[{c1:point(217,103),c2:point(235,103),end:point(252,103)}]},
+  {type:'curve',stroke:6,fill:false,closed:false,start:point(142,155),segments:[{c1:point(148,169),c2:point(154,167),end:point(160,155)},{c1:point(166,167),c2:point(172,169),end:point(178,155)}]}
+]});
+const empty=()=>({shapes:[]});
+function load(face){const raw=localStorage.getItem(key(face)); return raw?JSON.parse(raw):(face.row===1&&face.col===1?seed():empty());}
+function save(){localStorage.setItem(key(current),JSON.stringify(model));}
+function selectedShape(){return model.shapes[selected]||null;}
+function pathData(shape){let d=`M ${n(shape.start.x)} ${n(shape.start.y)}`;for(const segment of shape.segments)d+=` C ${n(segment.c1.x)} ${n(segment.c1.y)} ${n(segment.c2.x)} ${n(segment.c2.y)} ${n(segment.end.x)} ${n(segment.end.y)}`;return shape.closed?d+' Z':d;}
+function shapeSvg(shape,index,interactive=false){const cls=interactive?'shape-hit'+(index===selected?' selected-art':''):'';const style=`fill="${shape.fill?INK:'none'}" stroke="${INK}" stroke-width="${shape.stroke}" stroke-linecap="round" stroke-linejoin="round"`;
+ if(shape.type==='curve')return `<path data-shape="${index}" class="${cls}" d="${pathData(shape)}" ${style}/>`;
+ if(shape.type==='ellipse')return `<ellipse data-shape="${index}" class="${cls}" cx="${n(shape.cx)}" cy="${n(shape.cy)}" rx="${n(shape.rx)}" ry="${n(shape.ry)}" ${style}/>`;
+ return `<polygon data-shape="${index}" class="${cls}" points="${shape.points.map(p=>`${n(p.x)},${n(p.y)}`).join(' ')}" ${style}/>`;
+}
+function cleanSvg(){return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">\n  <rect width="320" height="240" fill="#000"/>\n${model.shapes.map((s,i)=>'  '+shapeSvg(s,i)).join('\n')}\n</svg>\n`;}
+function handle(cx,cy,kind,index){return `<circle class="${kind==='anchor'?'anchor':'control'}" data-handle="${kind}" data-index="${index}" cx="${n(cx)}" cy="${n(cy)}" r="${kind==='anchor'?4.6:4}"/>`;}
+function editorOverlay(shape){if(!shape)return ''; let out='<g id="handles">';
+ if(shape.type==='curve'){let anchor=shape.start;out+=handle(anchor.x,anchor.y,'anchor','start');shape.segments.forEach((s,i)=>{out+=`<line class="handle-line" x1="${anchor.x}" y1="${anchor.y}" x2="${s.c1.x}" y2="${s.c1.y}"/><line class="handle-line" x1="${s.c1.x}" y1="${s.c1.y}" x2="${s.c2.x}" y2="${s.c2.y}"/><line class="handle-line" x1="${s.c2.x}" y1="${s.c2.y}" x2="${s.end.x}" y2="${s.end.y}"/>`;out+=handle(s.c1.x,s.c1.y,'control',`c1:${i}`)+handle(s.c2.x,s.c2.y,'control',`c2:${i}`)+handle(s.end.x,s.end.y,'anchor',`end:${i}`);anchor=s.end;});}
+ else if(shape.type==='ellipse'){out+=`<line class="handle-line" x1="${shape.cx-shape.rx}" y1="${shape.cy}" x2="${shape.cx+shape.rx}" y2="${shape.cy}"/><line class="handle-line" x1="${shape.cx}" y1="${shape.cy-shape.ry}" x2="${shape.cx}" y2="${shape.cy+shape.ry}"/>`;out+=handle(shape.cx,shape.cy,'anchor','centre')+handle(shape.cx+shape.rx,shape.cy,'control','rx')+handle(shape.cx,shape.cy+shape.ry,'control','ry');}
+ else shape.points.forEach((p,i)=>out+=handle(p.x,p.y,'anchor',`point:${i}`)); return out+'</g>';}
+function render(){save();el.opacityLabel.value=`${el.opacity.value}%`;el.title.textContent=`Face R${current.row} C${current.col}`; const alpha=showReference?Number(el.opacity.value)/100:0; el.stage.innerHTML=`<rect width="320" height="240" fill="#000"/><image href="${reference(current)}" x="0" y="40" width="320" height="160" opacity="${alpha}" preserveAspectRatio="none" pointer-events="none"/>${model.shapes.map((s,i)=>shapeSvg(s,i,true)).join('')}${editorOverlay(selectedShape())}`;el.source.textContent=cleanSvg(); renderFaces();renderList();renderInspector();}
+function renderFaces(){el.faces.innerHTML=''; faces.forEach(face=>{const button=document.createElement('button');button.className='face'+(id(face)===id(current)?' selected':'')+(localStorage.getItem(doneKey(face))==='true'?' done':'');button.title=`Face R${face.row} C${face.col}`;button.innerHTML=`<img src="${reference(face)}" alt="Face row ${face.row}, column ${face.col}">`;button.onclick=()=>selectFace(face);el.faces.append(button);});}
+function label(shape,index){return `${index+1}. ${shape.type==='curve'?'Bézier curve':shape.type==='ellipse'?'Ellipse':'Polygon'}`;}
+function renderList(){el.list.innerHTML='';model.shapes.forEach((shape,index)=>{const b=document.createElement('button');b.className='shape'+(index===selected?' selected':'');b.textContent=label(shape,index);b.onclick=()=>{selected=index;render();};el.list.append(b);});if(!model.shapes.length)el.list.innerHTML='<p class="small">No shapes yet. Start with a Bézier curve, ellipse, or polygon.</p>';}
+function renderInspector(){const shape=selectedShape();if(!shape){el.inspector.innerHTML='';return;}const closed=shape.type==='curve'?`<label><input id="closed" type="checkbox" ${shape.closed?'checked':''}> Close path / fill shape</label>`:'';el.inspector.innerHTML=`<h2>Selected: ${label(shape,selected)}</h2><div class="row"><label>Stroke <input id="stroke" type="number" min="0" max="30" step="0.5" value="${shape.stroke}"></label><label><input id="fill" type="checkbox" ${shape.fill?'checked':''}> Fill</label>${closed}</div><p class="small">${shape.type==='curve'?'Drag endpoint anchors and the two control points for every segment. Add a segment to extend this path.':shape.type==='ellipse'?'Drag the blue centre point and amber radius handles.':'Drag any blue vertex. Add another polygon if you need a separate mark.'}</p>`;$('#stroke').oninput=e=>{shape.stroke=Math.max(0,Number(e.target.value)||0);render();};$('#fill').onchange=e=>{shape.fill=e.target.checked;render();};if(shape.type==='curve')$('#closed').onchange=e=>{shape.closed=e.target.checked;render();};}
+function selectFace(face){current=face;model=load(face);selected=0;el.complete.checked=localStorage.getItem(doneKey(face))==='true';render();}
+function addCurve(){model.shapes.push({type:'curve',stroke:6,fill:false,closed:false,start:point(100,120),segments:[{c1:point(120,90),c2:point(150,150),end:point(180,120)}]});selected=model.shapes.length-1;render();}
+function addEllipse(){model.shapes.push({type:'ellipse',stroke:6,fill:false,cx:160,cy:120,rx:24,ry:16});selected=model.shapes.length-1;render();}
+function addPolygon(){model.shapes.push({type:'polygon',stroke:6,fill:false,points:[point(135,105),point(185,105),point(160,145)]});selected=model.shapes.length-1;render();}
+function addSegment(){const shape=selectedShape();if(!shape||shape.type!=='curve'){message('Select a Bézier curve first.');return;}const start=shape.segments.at(-1)?.end||shape.start;shape.segments.push({c1:point(start.x+15,start.y-20),c2:point(start.x+35,start.y+20),end:point(start.x+50,start.y)});render();}
+function message(text){el.status.textContent=text;setTimeout(()=>{if(el.status.textContent===text)el.status.textContent='';},4200);}
+function stagePoint(event){const box=el.stage.getBoundingClientRect();return point(Math.max(0,Math.min(320,(event.clientX-box.left)*320/box.width)),Math.max(0,Math.min(240,(event.clientY-box.top)*240/box.height)));}
+function moveHandle(handle,p){const shape=selectedShape();if(!shape)return;const [part,raw]=handle.split(':');if(shape.type==='curve'){if(handle==='start')shape.start=p;else if(part==='c1'||part==='c2'||part==='end')shape.segments[Number(raw)][part]=p;}else if(shape.type==='ellipse'){if(handle==='centre'){shape.cx=p.x;shape.cy=p.y;}else if(handle==='rx')shape.rx=Math.max(2,Math.abs(p.x-shape.cx));else if(handle==='ry')shape.ry=Math.max(2,Math.abs(p.y-shape.cy));}else if(part==='point')shape.points[Number(raw)]=p;}
+el.stage.addEventListener('pointerdown',event=>{const handleTarget=event.target.closest('[data-handle]');if(handleTarget){drag=handleTarget.dataset.handleIndex||handleTarget.dataset.index;el.stage.setPointerCapture(event.pointerId);event.preventDefault();return;}const shapeTarget=event.target.closest('[data-shape]');if(shapeTarget){selected=Number(shapeTarget.dataset.shape);render();}});
+el.stage.addEventListener('pointermove',event=>{if(drag!==null){moveHandle(drag,stagePoint(event));render();}});el.stage.addEventListener('pointerup',event=>{if(drag!==null){drag=null;try{el.stage.releasePointerCapture(event.pointerId);}catch{}}});el.stage.addEventListener('pointercancel',()=>{drag=null;});
+function download(name,text,type){const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([text],{type}));link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);}
+function fileName(ext){return `stackchan-face-r${current.row}-c${current.col}.${ext}`;}
+function standalone(){return `<!doctype html><meta charset="utf-8"><title>${fileName('svg')}</title><style>body{margin:0;background:#000;display:grid;place-items:center;height:100vh}svg{max-width:100vw;max-height:100vh}</style>${cleanSvg()}`;}
+$('#new-curve').onclick=addCurve;$('#new-ellipse').onclick=addEllipse;$('#new-polygon').onclick=addPolygon;$('#add-segment').onclick=addSegment;$('#delete').onclick=()=>{if(!selectedShape())return;model.shapes.splice(selected,1);selected=Math.max(0,selected-1);render();};$('#clear').onclick=()=>{if(confirm(`Clear all vector shapes for Face R${current.row} C${current.col}?`)){model=empty();selected=0;render();}};$('#opacity').oninput=render;$('#reference').onclick=()=>{showReference=!showReference;$('#reference').textContent=showReference?'Hide reference':'Show reference';render();};el.complete.onchange=()=>{localStorage.setItem(doneKey(current),el.complete.checked);renderFaces();};$('#copy').onclick=async()=>{try{await navigator.clipboard.writeText(cleanSvg());message('SVG copied to clipboard.');}catch{message('Clipboard unavailable; use Download SVG.');}};$('#download').onclick=()=>{download(fileName('svg'),cleanSvg(),'image/svg+xml');message(`Downloaded ${fileName('svg')}`);};$('#download-html').onclick=()=>{download(fileName('html'),standalone(),'text/html');message(`Downloaded ${fileName('html')}`);};$('#save-folder').onclick=async()=>{if(!window.showDirectoryPicker){message('Folder saving is unavailable here; use Download SVG.');return;}try{const dir=await window.showDirectoryPicker({mode:'readwrite'}),handle=await dir.getFileHandle(fileName('svg'),{create:true}),file=await handle.createWritable();await file.write(cleanSvg());await file.close();message(`Saved ${fileName('svg')} to the selected folder.`);}catch(error){if(error.name!=='AbortError')message(`Could not save: ${error.message}`);}};window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();download(fileName('svg'),cleanSvg(),'image/svg+xml');message(`Downloaded ${fileName('svg')}`);}});
+selectFace(current);
 })();
 </script>
 </body>
