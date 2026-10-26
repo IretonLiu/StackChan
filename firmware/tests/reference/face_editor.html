@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StackChan Face Reference Editor</title>
+<style>
+  :root { color-scheme: dark; --ink:#f8f5ed; --panel:#161616; --line:#363636; --accent:#8cc8ff; --done:#75d69a; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:#0a0a0a; color:var(--ink); font:14px/1.4 system-ui,sans-serif; }
+  header { padding:16px 20px; border-bottom:1px solid var(--line); background:#111; }
+  h1 { margin:0; font-size:20px; } header p { margin:5px 0 0; color:#bbb; }
+  main { display:grid; grid-template-columns:224px minmax(350px, 1fr) minmax(300px, .9fr); min-height:calc(100vh - 82px); }
+  aside, section { padding:16px; border-right:1px solid var(--line); } section:last-child { border:0; }
+  h2 { font-size:14px; margin:0 0 10px; color:#bbb; text-transform:uppercase; letter-spacing:.06em; }
+  .faces { display:grid; grid-template-columns:repeat(3, 1fr); gap:7px; }
+  .face { position:relative; padding:0; border:1px solid #333; background:#000; cursor:pointer; aspect-ratio:2/1; }
+  .face:hover, .face.selected { border-color:var(--accent); outline:1px solid var(--accent); }
+  .face.done::after { content:"✓"; position:absolute; right:2px; top:0; color:#061108; background:var(--done); border-radius:50%; width:17px; height:17px; font-weight:bold; }
+  .face img { width:100%; height:100%; object-fit:cover; display:block; }
+  .canvas-wrap { background:#000; border:1px solid #333; max-width:720px; margin:auto; }
+  #stage { display:block; width:100%; height:auto; aspect-ratio:4/3; }
+  .controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+  button, input { font:inherit; } button { padding:7px 10px; border:1px solid #444; color:var(--ink); background:#242424; border-radius:4px; cursor:pointer; }
+  button:hover { border-color:var(--accent); background:#303030; } button.primary { border-color:#477da7; background:#1d496a; }
+  label { display:flex; align-items:center; gap:7px; color:#bbb; } input[type=range] { accent-color:var(--accent); }
+  textarea { display:block; width:100%; min-height:350px; resize:vertical; border:1px solid #444; border-radius:4px; padding:12px; background:#0b0b0b; color:#e8e8e8; font:13px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:2; }
+  .hint { margin:10px 0; color:#aaa; } code { color:#c3e4ff; } .status { min-height:20px; color:var(--done); margin-top:10px; }
+  .small { font-size:12px; color:#999; } .complete { margin-top:15px; }
+  @media (max-width: 1000px) { main { grid-template-columns:190px 1fr; } .editor { grid-column:1/-1; border-top:1px solid var(--line); } }
+  @media (max-width: 640px) { main { display:block; } aside, section { border-right:0; border-bottom:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>StackChan face reference editor</h1>
+  <p>Trace each supplied face as clean SVG paths. Drafts stay in this browser until exported.</p>
+</header>
+<main>
+  <aside>
+    <h2>Reference faces</h2>
+    <div id="faces" class="faces"></div>
+    <div class="complete"><label><input id="complete" type="checkbox"> Mark this face complete</label></div>
+    <p class="small">Faces are numbered in the reference image's original 3 × 8 order.</p>
+  </aside>
+
+  <section>
+    <h2 id="face-title">Face R1 C1</h2>
+    <div class="canvas-wrap"><svg id="stage" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="controls">
+      <label>Reference <input id="opacity" type="range" min="0" max="100" value="45"> <output id="opacity-value">45%</output></label>
+      <button id="toggle-reference">Hide reference</button>
+      <button id="clear">Clear vector</button>
+      <button id="seed">Load first-face seed</button>
+    </div>
+    <p class="hint">The reference is proportionally scaled to <code>320 × 160</code> and centered vertically in the <code>320 × 240</code> StackChan frame. Your white paths overlay it.</p>
+  </section>
+
+  <section class="editor">
+    <h2>SVG marks</h2>
+    <textarea id="markup" spellcheck="false" aria-label="SVG mark editor"></textarea>
+    <div class="controls">
+      <button id="add-path">Add path</button>
+      <button id="add-circle">Add circle</button>
+      <button id="add-ellipse">Add ellipse</button>
+      <button class="primary" id="download-svg">Download SVG</button>
+      <button id="download-html">Download HTML</button>
+      <button id="save-folder">Save to folder</button>
+      <button id="copy">Copy SVG</button>
+    </div>
+    <p class="small">Use <code>stroke="#f8f5ed"</code>, rounded caps/joins, and <code>fill="#f8f5ed"</code> for solid marks. “Save to folder” uses Chrome/Edge's folder picker; downloads work everywhere.</p>
+    <div id="status" class="status" role="status"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const root = 'individual';
+  const storePrefix = 'stackchan-face-editor-v1:';
+  const faces = Array.from({length: 24}, (_, i) => ({ row: Math.floor(i / 3) + 1, col: (i % 3) + 1 }));
+  const el = {
+    faces: document.querySelector('#faces'), stage: document.querySelector('#stage'), title: document.querySelector('#face-title'),
+    markup: document.querySelector('#markup'), opacity: document.querySelector('#opacity'), opacityValue: document.querySelector('#opacity-value'),
+    toggle: document.querySelector('#toggle-reference'), complete: document.querySelector('#complete'), status: document.querySelector('#status')
+  };
+  let current = faces[0];
+  let showReference = true;
+
+  const idFor = face => `r${face.row}-c${face.col}`;
+  const refFor = face => `${root}/row-${face.row}-col-${face.col}.png`;
+  const keyFor = face => storePrefix + idFor(face);
+  const doneKey = face => keyFor(face) + ':done';
+  const defaultMarks = `<!-- Add only SVG shapes inside this area. -->\n<path d="M 68 103 H 120 M 200 103 H 252"\n      fill="none" stroke="#f8f5ed" stroke-width="6"\n      stroke-linecap="round" stroke-linejoin="round"/>\n<path d="M 142 155 C 148 169 154 167 160 155 C 166 167 172 169 178 155"\n      fill="none" stroke="#f8f5ed" stroke-width="6"\n      stroke-linecap="round" stroke-linejoin="round"/>`;
+  const blankMarks = `<!-- Example:\n<path d="M 80 100 C 95 120 115 120 130 100" fill="none" stroke="#f8f5ed" stroke-width="7" stroke-linecap="round"/>\n-->`;
+
+  function escapeText(text) {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function marks() { return el.markup.value; }
+  function render() {
+    const opacity = showReference ? Number(el.opacity.value) / 100 : 0;
+    el.opacityValue.value = `${el.opacity.value}%`;
+    el.stage.innerHTML = `
+      <rect width="320" height="240" fill="#000"/>
+      <image href="${refFor(current)}" x="0" y="40" width="320" height="160" opacity="${opacity}" preserveAspectRatio="none"/>
+      <g id="vector-marks">${marks()}</g>`;
+    localStorage.setItem(keyFor(current), marks());
+    renderFaceButtons();
+  }
+  function vectorSvg() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">\n  <rect width="320" height="240" fill="#000"/>\n  ${marks()}\n</svg>\n`;
+  }
+  function filename(extension) { return `stackchan-face-r${current.row}-c${current.col}.${extension}`; }
+  function download(name, content, type) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([content], {type}));
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+  function standaloneHtml() {
+    return `<!doctype html><meta charset="utf-8"><title>${filename('svg')}</title><style>body{margin:0;background:#000;display:grid;place-items:center;height:100vh}svg{max-width:100vw;max-height:100vh}</style>${vectorSvg()}`;
+  }
+  function status(message) { el.status.textContent = message; setTimeout(() => { if (el.status.textContent === message) el.status.textContent = ''; }, 4000); }
+  function select(face) {
+    current = face;
+    el.title.textContent = `Face R${face.row} C${face.col}`;
+    el.markup.value = localStorage.getItem(keyFor(face)) ?? (face.row === 1 && face.col === 1 ? defaultMarks : blankMarks);
+    el.complete.checked = localStorage.getItem(doneKey(face)) === 'true';
+    render();
+  }
+  function renderFaceButtons() {
+    el.faces.innerHTML = '';
+    for (const face of faces) {
+      const button = document.createElement('button');
+      button.className = 'face' + (idFor(face) === idFor(current) ? ' selected' : '') +
+        (localStorage.getItem(doneKey(face)) === 'true' ? ' done' : '');
+      button.title = `Face R${face.row} C${face.col}`;
+      button.innerHTML = `<img src="${refFor(face)}" alt="Reference face row ${face.row}, column ${face.col}">`;
+      button.addEventListener('click', () => select(face));
+      el.faces.appendChild(button);
+    }
+  }
+  function append(snippet) {
+    const prefix = marks().trim() && !marks().trim().startsWith('<!-- Example') ? '\n\n' : '';
+    el.markup.value = (marks().trim().startsWith('<!-- Example') ? '' : marks()) + prefix + snippet;
+    render(); el.markup.focus(); el.markup.setSelectionRange(el.markup.value.length, el.markup.value.length);
+  }
+
+  el.markup.addEventListener('input', render);
+  el.opacity.addEventListener('input', render);
+  el.toggle.addEventListener('click', () => { showReference = !showReference; el.toggle.textContent = showReference ? 'Hide reference' : 'Show reference'; render(); });
+  el.complete.addEventListener('change', () => { localStorage.setItem(doneKey(current), el.complete.checked); renderFaceButtons(); });
+  document.querySelector('#clear').addEventListener('click', () => { el.markup.value = blankMarks; render(); });
+  document.querySelector('#seed').addEventListener('click', () => { el.markup.value = defaultMarks; render(); });
+  document.querySelector('#add-path').addEventListener('click', () => append('<path d="M 80 120 C 105 90 135 150 160 120" fill="none" stroke="#f8f5ed" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'));
+  document.querySelector('#add-circle').addEventListener('click', () => append('<circle cx="100" cy="105" r="16" fill="none" stroke="#f8f5ed" stroke-width="6"/>'));
+  document.querySelector('#add-ellipse').addEventListener('click', () => append('<ellipse cx="160" cy="155" rx="18" ry="12" fill="none" stroke="#f8f5ed" stroke-width="6"/>'));
+  document.querySelector('#download-svg').addEventListener('click', () => { download(filename('svg'), vectorSvg(), 'image/svg+xml'); status(`Downloaded ${filename('svg')}`); });
+  document.querySelector('#download-html').addEventListener('click', () => { download(filename('html'), standaloneHtml(), 'text/html'); status(`Downloaded ${filename('html')}`); });
+  document.querySelector('#copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(vectorSvg()); status('SVG copied to clipboard.'); } catch { status('Clipboard permission was denied. Use Download SVG instead.'); } });
+  document.querySelector('#save-folder').addEventListener('click', async () => {
+    if (!window.showDirectoryPicker) { status('Folder saving is unavailable here; use Download SVG.'); return; }
+    try {
+      const directory = await window.showDirectoryPicker({mode: 'readwrite'});
+      const handle = await directory.getFileHandle(filename('svg'), {create: true});
+      const writable = await handle.createWritable();
+      await writable.write(vectorSvg()); await writable.close();
+      status(`Saved ${filename('svg')} to the selected folder.`);
+    } catch (error) { if (error.name !== 'AbortError') status(`Could not save: ${error.message}`); }
+  });
+  window.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); download(filename('svg'), vectorSvg(), 'image/svg+xml'); status(`Downloaded ${filename('svg')}`); } });
+
+  select(current);
+})();
+</script>
+</body>
+</html>

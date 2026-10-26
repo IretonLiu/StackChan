@@ -13,3 +13,10 @@ SHA-256: `a1586bd6d26edfb87cb9d886b844c30dadba879e57f6d94ef78b38dd5eac2377`
 `row-1-col-1.png` is the calm default face at the upper left, and
 `row-8-col-3.png` is the lower-right face. These crops are for close
 shape-by-shape approximation; the original image above remains authoritative.
+
+## Local tracing editor
+
+Open `face_editor.html` in a modern desktop browser. Select a crop, trace SVG
+marks over its semi-transparent reference, then download the clean SVG or save
+it directly into a folder (Chrome/Edge). Draft markup and completion marks are
+kept in browser local storage, so face work can proceed one at a time.
