@@ -5,3 +5,11 @@ for the procedural expression study. It is intentionally retained unchanged so
 future expression changes can be checked against the original art direction.
 
 SHA-256: `a1586bd6d26edfb87cb9d886b844c30dadba879e57f6d94ef78b38dd5eac2377`
+
+## Individual faces
+
+`individual/` contains the 24 source faces, cropped unchanged into the same
+3-column × 8-row order as the reference. Files use one-based coordinates:
+`row-1-col-1.png` is the calm default face at the upper left, and
+`row-8-col-3.png` is the lower-right face. These crops are for close
+shape-by-shape approximation; the original image above remains authoritative.
