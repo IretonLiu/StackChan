@@ -29,7 +29,12 @@ list(APPEND STACK_CHAN_SOURCES
 
 # Keep the optional XiaoZhi runtime source list explicit. Its checkout and
 # minimal board compatibility remain available to Pet Base even when disabled.
-if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
+if(CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
+    # Pet compatibility implementations intentionally shadow inherited XiaoZhi
+    # classes in the minimal image; compiling both variants creates duplicate
+    # definitions in a normal assistant build.
+    list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "hal/pet_compat/.*\\.cpp$")
+else()
     foreach(APP_DIR app_ai_agent app_app_center app_avatar app_dance app_espnow_ctrl app_ezdata app_launcher app_setup app_template)
         list(FILTER STACK_CHAN_SOURCES EXCLUDE REGEX "(^|.*/)apps/${APP_DIR}/.*")
     endforeach()
@@ -135,9 +140,11 @@ endif()
 set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
 # Transform include dirs to absolute paths from xiaozhi-esp32/main
 list(TRANSFORM INCLUDE_DIRS PREPEND "${XIAOZHI_MAIN_DIR}/")
-# Local compatibility headers shadow remaining XiaoZhi headers as each service
-# is migrated into hal/pet_compat/.
-list(PREPEND INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet_compat")
+# Local compatibility headers shadow remaining XiaoZhi headers only in the
+# minimal image. The assistant runtime must use the matching upstream classes.
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
+    list(PREPEND INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/hal/pet_compat")
+endif()
 
 # Add board common files
 list(APPEND SOURCES
@@ -360,11 +367,14 @@ if(CONFIG_IDF_TARGET_ESP32)
                              )
 endif()
 
-# Include EspVideo if target is ESP32S3 or ESP32P4
+# Include EspVideo if target is ESP32S3 or ESP32P4. RNDIS support is needed
+# only by its dedicated board; compiling it for every ESP32-S3 board pulls in
+# an unrelated, incomplete implementation.
 if(CONFIG_IDF_TARGET_ESP32S3 OR CONFIG_IDF_TARGET_ESP32P4)
-    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/boards/common/esp_video.cc"
-                        "${XIAOZHI_MAIN_DIR}/boards/common/rndis_board.cc"
-                        )
+    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/boards/common/esp_video.cc")
+endif()
+if(CONFIG_BOARD_TYPE_ESP_KORVO2_V3_RNDIS)
+    list(APPEND SOURCES "${XIAOZHI_MAIN_DIR}/boards/common/rndis_board.cc")
 endif()
 
 # Include Esp32Camera if target is ESP32S3
@@ -417,11 +427,10 @@ set(STACKCHAN_PRIV_REQUIRES
     mooncake_log
     smooth_ui_toolkit
 )
-# esp-now installs global logging wrappers. Only pull it into images that
-# build the optional XiaoZhi runtime which uses ESP-NOW services.
-if(CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
-    list(APPEND STACKCHAN_PRIV_REQUIRES esp-now)
-endif()
+# hal_espnow.cpp is selected before Kconfig values are available while ESP-IDF
+# resolves component requirements. Keep its include provider unconditional so
+# stock XiaoZhi builds cannot compile the source without <espnow.h>.
+list(APPEND STACKCHAN_PRIV_REQUIRES esp-now)
 
 idf_component_register(SRCS ${SOURCES}
                     EMBED_FILES ${LANG_SOUNDS} ${COMMON_SOUNDS}
@@ -429,6 +438,15 @@ idf_component_register(SRCS ${SOURCES}
                     WHOLE_ARCHIVE
                     PRIV_REQUIRES ${STACKCHAN_PRIV_REQUIRES}
                     )
+
+# esp-now exports global log wrappers. Pet Base does not compile or initialize
+# ESP-NOW, so bind those wrapper symbols to ESP-IDF's regular logger rather
+# than pulling the unused wrapper implementation into the minimal image.
+if(NOT CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME)
+    target_link_options(${COMPONENT_LIB} INTERFACE
+        "-Wl,--defsym=__wrap_esp_log_write=esp_log_write"
+        "-Wl,--defsym=__wrap_esp_log_writev=esp_log_writev")
+endif()
 
 # Use target_compile_definitions to define BOARD_TYPE, BOARD_NAME
 # If BOARD_NAME is empty, use BOARD_TYPE

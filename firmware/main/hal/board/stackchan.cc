@@ -2,8 +2,11 @@
 #include "cores3_audio_codec.h"
 #include "display/lcd_display.h"
 #include "stackchan_display.h"
-#if !CONFIG_STACKCHAN_MINIMAL_PET_BASE
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
 #include "application.h"
+#include "power_save_timer.h"
+#include "wifi_board.h"
+#include <wifi_station.h>
 #endif
 #include "config.h"
 #include "i2c_device.h"
@@ -337,7 +340,13 @@ private:
     uint32_t consecutive_failures_ = 0;
 };
 
-class M5StackCoreS3Board : public Board {
+class M5StackCoreS3Board : public
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+                             WifiBoard
+#else
+                             Board
+#endif
+{
 private:
     static constexpr int kPowerSaveSleepDelaySeconds  = 300;
     static constexpr int kPowerStatePollIntervalMs    = 1000;
@@ -359,12 +368,37 @@ private:
     LvglDisplay* display_;
     StackChanCamera* camera_;
     esp_timer_handle_t touchpad_timer_;
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    PowerSaveTimer* power_save_timer_;
+    hal_bridge::XiaozhiConfig_t xiaozhi_config_;
+#endif
     std::mutex power_state_mutex_;
     PowerState power_state_;
     bool last_power_save_enabled_             = false;
     int64_t last_power_state_check_ms_        = 0;
     int64_t last_power_error_log_ms_          = 0;
     uint32_t consecutive_power_read_failures_ = 0;
+
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    bool ShouldEnablePowerSave(bool has_external_power, bool is_discharging) const
+    {
+        return is_discharging || (has_external_power && xiaozhi_config_.allowShutdownWhenCharging);
+    }
+
+    void UpdatePowerSaveEnabled(bool has_external_power, bool is_discharging)
+    {
+        const bool should_enable_power_save = ShouldEnablePowerSave(has_external_power, is_discharging);
+        if (should_enable_power_save == last_power_save_enabled_) {
+            return;
+        }
+
+        ESP_LOGI(TAG, "Power save timer %s: external_power=%d, discharging=%d, allow_shutdown_when_charging=%d",
+                 should_enable_power_save ? "enabled" : "disabled", has_external_power, is_discharging,
+                 xiaozhi_config_.allowShutdownWhenCharging);
+        power_save_timer_->SetEnabled(should_enable_power_save);
+        last_power_save_enabled_ = should_enable_power_save;
+    }
+#endif
 
     void RefreshPowerState()
     {
@@ -389,6 +423,12 @@ private:
             }
         }
 
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+        if (status_err == ESP_OK) {
+            UpdatePowerSaveEnabled(has_external_power, discharging);
+        }
+#endif
+
         if (status_err != ESP_OK || level_err != ESP_OK) {
             consecutive_power_read_failures_++;
             const int64_t now_ms = esp_timer_get_time() / 1000;
@@ -408,6 +448,44 @@ private:
             last_power_error_log_ms_         = 0;
         }
     }
+
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    void PollPowerSaveState()
+    {
+        const int64_t now_ms = esp_timer_get_time() / 1000;
+        if (last_power_state_check_ms_ != 0 && (now_ms - last_power_state_check_ms_) < kPowerStatePollIntervalMs) {
+            return;
+        }
+        last_power_state_check_ms_ = now_ms;
+        RefreshPowerState();
+    }
+
+    void InitializePowerSaveTimer()
+    {
+        xiaozhi_config_ = hal_bridge::get_xiaozhi_config();
+
+        const int seconds_to_shutdown = xiaozhi_config_.idleShutdownTimeSeconds > 0
+                                            ? static_cast<int>(xiaozhi_config_.idleShutdownTimeSeconds)
+                                            : -1;
+        const int seconds_to_sleep    = seconds_to_shutdown == -1
+                                            ? kPowerSaveSleepDelaySeconds
+                                            : std::min(kPowerSaveSleepDelaySeconds, seconds_to_shutdown);
+
+        ESP_LOGI(TAG, "Init power save timer: sleep=%d s, shutdown=%d s, allow_shutdown_when_charging=%d",
+                 seconds_to_sleep, seconds_to_shutdown, xiaozhi_config_.allowShutdownWhenCharging);
+
+        power_save_timer_ = new PowerSaveTimer(-1, seconds_to_sleep, seconds_to_shutdown);
+        power_save_timer_->OnEnterSleepMode([this]() {
+            GetDisplay()->SetPowerSaveMode(true);
+        });
+        power_save_timer_->OnExitSleepMode([this]() {
+            GetDisplay()->SetPowerSaveMode(false);
+            GetBacklight()->RestoreBrightness();
+        });
+        power_save_timer_->OnShutdownRequest([this]() { pmic_->PowerOff(); });
+        RefreshPowerState();
+    }
+#endif
 
     void InitializeI2c()
     {
@@ -488,6 +566,9 @@ private:
                 [](void* arg) {
                     M5StackCoreS3Board* board = (M5StackCoreS3Board*)arg;
                     board->PollTouchpad();
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+                    board->PollPowerSaveState();
+#endif
                 },
             .arg                   = this,
             .dispatch_method       = ESP_TIMER_TASK,
@@ -616,7 +697,11 @@ public:
     {
         InitializeI2c();
         InitializeAxp2101();
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+        InitializePowerSaveTimer();
+#else
         RefreshPowerState();
+#endif
         InitializeAw9523();
         I2cDetect();
         InitializeFt6336();
@@ -627,6 +712,15 @@ public:
         GetBacklight()->RestoreBrightness();
     }
 
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    // All fallback paths (no saved SSID, timeout, explicit reconfiguration)
+    // use the StackChan App setup flow instead of the upstream configuration AP.
+    void StartWifiConfigMode() override
+    {
+        ESP_LOGW(TAG, "WiFi setup required; opening StackChan App setup");
+        GetHAL().requestAppSetup();
+    }
+#else
     std::string GetBoardType() override
     {
         return "m5stack-stack-chan";
@@ -661,6 +755,7 @@ public:
     {
         return R"({"network":"disabled"})";
     }
+#endif
 
     virtual AudioCodec* GetAudioCodec() override
     {
@@ -696,9 +791,16 @@ public:
 
     virtual void SetPowerSaveLevel(PowerSaveLevel level) override
     {
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+        if (level != PowerSaveLevel::LOW_POWER) {
+            power_save_timer_->WakeUp();
+        }
+        WifiBoard::SetPowerSaveLevel(level);
+#else
         // Pet sleep is owned by the behaviour state machine, not XiaoZhi's
         // global timer. This no-op preserves the board interface until then.
         (void)level;
+#endif
     }
 
     virtual Backlight* GetBacklight() override
@@ -807,8 +909,8 @@ uint8_t hal_bridge::board_get_speaker_volume()
 
 void hal_bridge::toggle_xiaozhi_chat_state()
 {
-#if CONFIG_STACKCHAN_MINIMAL_PET_BASE
-    ESP_LOGW(TAG, "Xiaozhi chat toggle ignored in Pet Base image");
+#if !CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
+    ESP_LOGW(TAG, "Xiaozhi chat toggle ignored because the runtime is excluded");
 #else
     auto& app = Application::GetInstance();
     if (app.GetDeviceState() == kDeviceStateStarting) {

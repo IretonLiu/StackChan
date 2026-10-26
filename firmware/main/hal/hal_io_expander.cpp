@@ -38,11 +38,15 @@ void Hal::io_expander_init()
     }
 
     if (_io_expander) {
-        // VM EN
+        // VM EN: preload the output latch low before enabling the pin so the
+        // servo rail never pulses on during Pet Base bring-up.
+        _io_expander->digitalWrite(0, false);
         _io_expander->setDirection(0, true);  // Output
         _io_expander->setPullMode(0, true);   // Pull-up
+#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME
         GetHAL().setServoPowerEnabled(true);
         vTaskDelay(pdMS_TO_TICKS(200));
+#endif
 
         // RGB
         _io_expander->setDirection(13, true);   // Output

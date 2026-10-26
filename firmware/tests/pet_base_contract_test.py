@@ -75,6 +75,19 @@ class PetBaseBuildContractTest(unittest.TestCase):
             with self.subTest(access=access):
                 self.assertNotIn(access, app_source)
 
+    def test_minimal_bringup_keeps_servo_rail_off(self) -> None:
+        source = (self.root / "main/hal/hal_io_expander.cpp").read_text()
+        servo_setup = source.split("        // RGB", maxsplit=1)[0]
+
+        off_index = servo_setup.index("_io_expander->digitalWrite(0, false);")
+        output_index = servo_setup.index("_io_expander->setDirection(0, true);")
+        runtime_guard_index = servo_setup.index("#if CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME")
+        on_index = servo_setup.index("GetHAL().setServoPowerEnabled(true);")
+
+        self.assertLess(off_index, output_index)
+        self.assertLess(output_index, runtime_guard_index)
+        self.assertLess(runtime_guard_index, on_index)
+
     def test_assistant_asset_partition_is_not_rebuilt_or_flashed(self) -> None:
         self.assertIn("CONFIG_FLASH_NONE_ASSETS=y", self.sdkconfig)
         flash_args = (self.build_dir / "flash_args").read_text()
