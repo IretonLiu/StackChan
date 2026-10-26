@@ -23,6 +23,8 @@ user-authored R1 C1 base, retained exactly at `templates/r1-c1-base.svg`, so
 new work starts from the approved stroke weight, eye placement, and mouth
 rather than an empty canvas. Download the clean SVG or save it directly into a
 folder (Chrome/Edge). Each face has a 100-step undo/redo history during its
-editing session (Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z). Shape drafts and completion
-marks are kept in browser local storage, so face work can proceed one at a
-time.
+editing session (Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z). Use **Duplicate selected**
+to make a 12-pixel-offset copy, and **Move selected** to drag an entire
+curve, ellipse, or polygon without disturbing its internal control points.
+Shape drafts and completion marks are kept in browser local storage, so face
+work can proceed one at a time.
