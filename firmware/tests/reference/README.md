@@ -24,7 +24,10 @@ new work starts from the approved stroke weight, eye placement, and mouth
 rather than an empty canvas. Download the clean SVG or save it directly into a
 folder (Chrome/Edge). Each face has a 100-step undo/redo history during its
 editing session (Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z). Use **Duplicate selected**
-to make a 12-pixel-offset copy, and **Move selected** to drag an entire
-curve, ellipse, or polygon without disturbing its internal control points.
-Shape drafts and completion marks are kept in browser local storage, so face
-work can proceed one at a time.
+to make a 12-pixel-offset copy. The green centre handle (or **Move selected**)
+drags an entire curve, ellipse, or polygon without disturbing its internal
+control points. **Mirror across centre** reflects the selected shape over the
+display's vertical centre line, which is useful after duplicating an eye.
+Curves may contain both Bézier and straight line segments. Shape drafts and
+completion marks are kept in browser local storage, so face work can proceed
+one at a time.
