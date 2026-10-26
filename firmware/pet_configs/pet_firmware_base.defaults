@@ -10,3 +10,7 @@ CONFIG_LV_USE_VECTOR_GRAPHIC=y
 # LVGL's software vector backend uses the bundled ThorVG implementation.
 CONFIG_LV_USE_THORVG=y
 CONFIG_LV_USE_THORVG_INTERNAL=y
+# LVGL's ThorVG software rasterizer needs about 21 KiB of stack per face frame.
+# The pet app renders faces from the main task, so the default 8 KiB stack is
+# not enough and silently corrupts the heap.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768

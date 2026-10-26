@@ -51,29 +51,33 @@ void append(FaceDrawing& drawing, FacePath face_path)
     }
 }
 
-FaceDrawing idleFace()
+void clear(FaceDrawing& drawing)
 {
-    FaceDrawing drawing{.background = {0, 0, 0}};
+    drawing.background = {0, 0, 0};
+    drawing.path_count = 0;
+}
+
+void idleFace(FaceDrawing& drawing)
+{
+    clear(drawing);
     append(drawing, path(false, {move(69.0f, 110.9f), cubic(85.0f, 103.0f, 103.0f, 103.0f, 120.0f, 103.0f)}));
     append(drawing, path(false, {move(200.0f, 103.0f), cubic(217.0f, 103.0f, 235.0f, 103.0f, 249.3f, 109.2f)}));
     append(drawing, path(false, {move(136.0f, 125.0f), cubic(148.0f, 139.0f, 154.0f, 137.0f, 160.0f, 125.0f),
                                 cubic(170.0f, 130.0f, 172.0f, 139.0f, 184.0f, 125.0f)}));
-    return drawing;
 }
 
-FaceDrawing mischievousFace()
+void mischievousFace(FaceDrawing& drawing)
 {
-    FaceDrawing drawing{.background = {0, 0, 0}};
+    clear(drawing);
     append(drawing, path(true, {move(85.1f, 89.3f), cubic(72.0f, 119.7f, 93.9f, 134.9f, 120.9f, 125.2f), close()}));
     append(drawing, path(true, {move(201.2f, 126.1f), cubic(234.9f, 133.7f, 245.9f, 112.1f, 235.4f, 88.9f), close()}));
     append(drawing, path(false, {move(136.0f, 125.0f), cubic(148.0f, 139.0f, 154.0f, 137.0f, 160.0f, 125.0f),
                                 cubic(170.0f, 130.0f, 172.0f, 139.0f, 184.0f, 125.0f)}));
-    return drawing;
 }
 
-FaceDrawing happyFace()
+void happyFace(FaceDrawing& drawing)
 {
-    FaceDrawing drawing{.background = {0, 0, 0}};
+    clear(drawing);
     append(drawing, path(false, {move(136.0f, 125.0f), cubic(148.0f, 139.0f, 154.0f, 137.0f, 160.0f, 125.0f),
                                 cubic(170.0f, 130.0f, 172.0f, 139.0f, 184.0f, 125.0f)}));
     append(drawing, path(false, {move(227.3f, 116.3f), line(196.5f, 104.9f)}));
@@ -90,12 +94,11 @@ FaceDrawing happyFace()
     append(drawing, path(false, {move(240.9f, 134.0f), line(236.0f, 123.3f)}));
     append(drawing, path(true, {move(227.3f, 53.0f), cubic(213.8f, 29.4f, 209.2f, 60.6f, 220.6f, 71.6f),
                                cubic(246.8f, 63.6f, 250.6f, 49.6f, 226.9f, 53.0f), close()}));
-    return drawing;
 }
 
-FaceDrawing dizzyFace()
+void dizzyFace(FaceDrawing& drawing)
 {
-    FaceDrawing drawing{.background = {0, 0, 0}};
+    clear(drawing);
     append(drawing, path(false, {move(81.7f, 99.5f), cubic(65.6f, 137.5f, 112.1f, 140.4f, 118.0f, 113.0f),
                                 cubic(120.5f, 98.2f, 106.6f, 86.4f, 94.4f, 95.7f),
                                 cubic(87.2f, 104.9f, 86.3f, 115.9f, 102.4f, 115.5f)}));
@@ -106,7 +109,6 @@ FaceDrawing dizzyFace()
                                 cubic(150.1f, 135.3f, 150.1f, 137.9f, 155.6f, 123.9f),
                                 cubic(164.0f, 135.8f, 164.4f, 136.2f, 167.8f, 123.1f),
                                 cubic(179.2f, 134.1f, 178.8f, 133.2f, 185.5f, 123.1f)}));
-    return drawing;
 }
 
 void transformPoint(Vec2& point, float rotation_degrees, Vec2 center, float translate_x, float translate_y)
@@ -135,15 +137,15 @@ void transform(FacePath& path, float rotation_degrees, Vec2 center, float transl
     }
 }
 
-FaceDrawing drawingFor(PetFaceState state)
+void drawingFor(PetFaceState state, FaceDrawing& drawing)
 {
     switch (state) {
-        case PetFaceState::Idle: return idleFace();
-        case PetFaceState::Mischievous: return mischievousFace();
-        case PetFaceState::Happy: return happyFace();
-        case PetFaceState::Dizzy: return dizzyFace();
+        case PetFaceState::Idle: idleFace(drawing); return;
+        case PetFaceState::Mischievous: mischievousFace(drawing); return;
+        case PetFaceState::Happy: happyFace(drawing); return;
+        case PetFaceState::Dizzy: dizzyFace(drawing); return;
     }
-    return idleFace();
+    idleFace(drawing);
 }
 
 }  // namespace
@@ -175,7 +177,7 @@ void PetFaceAnimator::onShaken(uint32_t now_ms)
     state_ends_ms_ = now_ms + 4000;
 }
 
-FaceDrawing PetFaceAnimator::sample(uint32_t now_ms)
+const FaceDrawing& PetFaceAnimator::sample(uint32_t now_ms)
 {
     if ((state_ == PetFaceState::Happy || state_ == PetFaceState::Dizzy) && now_ms >= state_ends_ms_) {
         setState(PetFaceState::Idle, now_ms);
@@ -186,24 +188,24 @@ FaceDrawing PetFaceAnimator::sample(uint32_t now_ms)
         next_idle_change_ms_ = now_ms + nextIdleIntervalMs();
     }
 
-    FaceDrawing drawing = drawingFor(state_);
+    drawingFor(state_, drawing_);
     const float elapsed_ms = static_cast<float>(now_ms - state_started_ms_);
     if (state_ == PetFaceState::Idle || state_ == PetFaceState::Mischievous) {
         const float breath = std::sin(elapsed_ms * (2.0f * kPi / 2600.0f)) * 1.35f;
-        transform(drawing.paths[2], 0.0f, {0.0f, 0.0f}, 0.0f, breath);
+        transform(drawing_.paths[2], 0.0f, {0.0f, 0.0f}, 0.0f, breath);
     } else if (state_ == PetFaceState::Happy) {
         const float phase = std::sin(elapsed_ms * (2.0f * kPi / 720.0f));
         for (uint8_t index = 7; index <= 12; ++index) {
             const float direction = (index % 2 == 1) ? -1.0f : 1.0f;
-            transform(drawing.paths[index], 0.0f, {0.0f, 0.0f}, direction * phase * 1.6f, phase * 0.8f);
+            transform(drawing_.paths[index], 0.0f, {0.0f, 0.0f}, direction * phase * 1.6f, phase * 0.8f);
         }
-        transform(drawing.paths[13], std::sin(elapsed_ms * (2.0f * kPi / 1100.0f)) * 10.0f, {229.0f, 53.0f});
+        transform(drawing_.paths[13], std::sin(elapsed_ms * (2.0f * kPi / 1100.0f)) * 10.0f, {229.0f, 53.0f});
     } else if (state_ == PetFaceState::Dizzy) {
         const float angle = std::fmod(elapsed_ms * 0.40f, 360.0f);
-        transform(drawing.paths[0], angle, {96.0f, 112.0f});
-        transform(drawing.paths[1], angle, {211.0f, 112.0f});
+        transform(drawing_.paths[0], angle, {96.0f, 112.0f});
+        transform(drawing_.paths[1], angle, {211.0f, 112.0f});
     }
-    return drawing;
+    return drawing_;
 }
 
 PetFaceState PetFaceAnimator::state() const
