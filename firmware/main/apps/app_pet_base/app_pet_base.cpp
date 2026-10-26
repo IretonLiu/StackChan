@@ -12,6 +12,7 @@ using namespace smooth_ui_toolkit::lvgl_cpp;
 
 namespace {
 constexpr std::string_view kTag = "PetBase";
+constexpr uint32_t kFaceUpdateIntervalMs      = 33;
 constexpr uint32_t kStackChanUpdateIntervalMs = 20;
 constexpr uint32_t kPetBlue = 0x12304A;
 }  // namespace
@@ -39,35 +40,34 @@ void AppPetBase::onOpen()
     _panel->setBorderWidth(0);
     _panel->setPaddingAll(0);
 
-    _title = std::make_unique<Label>(_panel->get());
-    _title->setText("PET BASE");
-    _title->setTextFont(&lv_font_montserrat_24);
-    _title->setTextColor(lv_color_hex(0xD9F1FF));
-    _title->align(LV_ALIGN_CENTER, 0, -14);
-
-    _status = std::make_unique<Label>(_panel->get());
-    _status->setText("custom firmware is running");
-    _status->setTextFont(&lv_font_montserrat_16);
-    _status->setTextColor(lv_color_hex(0x6FA7C6));
-    _status->align(LV_ALIGN_CENTER, 0, 17);
+    _face_renderer = std::make_unique<pet::face::LvglFaceRenderer>(_panel->get());
+    const uint32_t now = PetHardware::millis();
+    _face_controller.request(pet::face::ExpressionId::Idle, 1.0f, pet::face::Transition{220}, now);
+    _face_renderer->render(_face_controller.sample(now));
 
     // This image is a safe, inert starting point: no autonomous servo motion
     // until the behaviour layer owns it.
     PetHardware::enterSafeIdle(kPetBlue);
-    _last_stackchan_update_ms = PetHardware::millis();
+    _last_face_update_ms       = now;
+    _last_stackchan_update_ms = now;
 }
 
 void AppPetBase::onRunning()
 {
     const uint32_t now = PetHardware::millis();
-    if (now - _last_stackchan_update_ms < kStackChanUpdateIntervalMs) {
-        return;
+    if (now - _last_face_update_ms >= kFaceUpdateIntervalMs) {
+        PetHardware::DisplayLock lock;
+        _face_renderer->render(_face_controller.sample(now));
+        _last_face_update_ms = now;
     }
-    _last_stackchan_update_ms = now;
 
-    // Keeps hardware effects (including the LEDs) progressing without the
-    // old XiaoZhi background task. Future pet behaviour runs above this call.
-    PetHardware::update();
+    if (now - _last_stackchan_update_ms >= kStackChanUpdateIntervalMs) {
+        _last_stackchan_update_ms = now;
+
+        // Keeps hardware effects (including the LEDs) progressing without the
+        // old XiaoZhi background task. Future pet behaviour runs above this call.
+        PetHardware::update();
+    }
 }
 
 void AppPetBase::onClose()
@@ -75,7 +75,6 @@ void AppPetBase::onClose()
     mclog::tagInfo(kTag, "close custom pet base app");
 
     PetHardware::DisplayLock lock;
-    _status.reset();
-    _title.reset();
+    _face_renderer.reset();
     _panel.reset();
 }

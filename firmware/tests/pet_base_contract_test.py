@@ -55,6 +55,8 @@ class PetBaseBuildContractTest(unittest.TestCase):
         required_sources = (
             "/hal/pet/pet_hardware.cpp",
             "/hal/pet/pet_hardware_policy.cpp",
+            "/pet/face/face.cpp",
+            "/pet/face/lvgl_face_renderer.cpp",
             "/hal/board/stackchan_camera.cc",
             "/hal/board/stackchan_display.cc",
         )

@@ -28,6 +28,22 @@ cmake --build build-host-tests
 ctest --test-dir build-host-tests --output-on-failure
 ```
 
+### Local face previews
+
+The procedural face core can be reviewed without ESP-IDF or a connected
+StackChan. The preview tool writes an SVG still or a directory of SVG animation
+frames with an `index.html` contact sheet:
+
+```bash
+# After building the host suite above:
+./build-host-tests/face_preview --expression happy --output happy.svg
+./build-host-tests/face_preview \
+  --from idle --to excited --duration-ms 220 --frames 12 --output face-transition
+```
+
+Open the SVG or `face-transition/index.html` in a browser before flashing.
+Use `--help` for every available semantic expression and option.
+
 For Pet Base, run the complete suite after exporting ESP-IDF. It runs those
 host tests, builds the isolated image, then verifies its build configuration
 and compiled-source boundary:

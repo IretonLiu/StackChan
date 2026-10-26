@@ -29,3 +29,28 @@ target_include_directories(pet_hardware_policy_test PRIVATE
 target_compile_features(pet_hardware_policy_test PRIVATE cxx_std_17)
 
 add_test(NAME pet_hardware_policy_test COMMAND $<TARGET_FILE:pet_hardware_policy_test>)
+
+add_executable(face_expression_test
+    face_expression_test.cpp
+    ../main/pet/face/face.cpp
+)
+
+target_include_directories(face_expression_test PRIVATE
+    ../main
+)
+
+target_compile_features(face_expression_test PRIVATE cxx_std_17)
+
+add_test(NAME face_expression_test COMMAND $<TARGET_FILE:face_expression_test>)
+
+add_executable(face_preview
+    face_preview.cpp
+    face_svg_renderer.cpp
+    ../main/pet/face/face.cpp
+)
+
+target_include_directories(face_preview PRIVATE
+    ../main
+)
+
+target_compile_features(face_preview PRIVATE cxx_std_17)
