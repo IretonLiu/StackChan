@@ -75,3 +75,8 @@ XiaoZhi feature set in the checkout, but Pet Base sets it to `n`, excluding its
 apps, services, audio processing, remote networking, and assistant assets.
 The retained display/camera/audio board compatibility is progressively being
 moved behind the custom `hal/` boundary.
+
+Measured memory, display and frame-time budgets for this image live in
+[docs/pet-base-budgets.md](docs/pet-base-budgets.md). Read it before adding
+renderers, buffers or tasks: the panel is bandwidth-bound at ~32 fps for a full
+frame, and the vector rasterizer needs ~21 KiB of stack.
