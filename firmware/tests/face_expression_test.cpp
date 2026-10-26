@@ -26,15 +26,14 @@ float difference(const FacePose& left, const FacePose& right)
 {
     return std::fabs(left.left_eye.center.x - right.left_eye.center.x) +
            std::fabs(left.left_eye.center.y - right.left_eye.center.y) +
-           std::fabs(left.left_eye.lid_open - right.left_eye.lid_open) +
-           std::fabs(left.left_eye.pupil_offset.x - right.left_eye.pupil_offset.x) +
+           std::fabs(left.left_eye.openness - right.left_eye.openness) +
            std::fabs(left.right_eye.center.x - right.right_eye.center.x) +
            std::fabs(left.right_eye.center.y - right.right_eye.center.y) +
-           std::fabs(left.right_eye.lid_open - right.right_eye.lid_open) +
+           std::fabs(left.right_eye.openness - right.right_eye.openness) +
            std::fabs(left.mouth.width - right.mouth.width) +
            std::fabs(left.mouth.curve_depth - right.mouth.curve_depth) +
            std::fabs(left.mouth.openness - right.mouth.openness) +
-           std::fabs(left.blush_intensity - right.blush_intensity) + std::fabs(left.visual_tilt - right.visual_tilt);
+           std::fabs(left.accent_intensity - right.accent_intensity) + std::fabs(left.visual_tilt - right.visual_tilt);
 }
 
 void testAllSemanticPresetsProduceSafeGeometry()
@@ -88,7 +87,7 @@ void testSleepingFaceCannotBeOpenedByBlinkOverlay()
     controller.request(ExpressionId::Sleeping, 1.0f, Transition{0}, 0);
     for (uint32_t now = 0; now <= 8000; now += 50) {
         const FacePose pose = controller.sample(now);
-        expect(pose.left_eye.lid_open == 0.0f && pose.right_eye.lid_open == 0.0f,
+        expect(pose.left_eye.openness == 0.0f && pose.right_eye.openness == 0.0f,
                "the blink overlay does not open a sleeping face");
     }
 }

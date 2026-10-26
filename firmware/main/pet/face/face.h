@@ -21,28 +21,57 @@ struct Vec2 {
     float y;
 };
 
+// Compact, kaomoji-like eye marks. They are deliberately not character eyes.
+enum class EyeGlyph : uint8_t {
+    Stroke,
+    Arc,
+    Circle,
+    Chevron,
+    HalfLid,
+    Dot,
+};
+
+enum class MouthGlyph : uint8_t {
+    Curve,
+    OpenOval,
+    Three,
+    ZigZag,
+    TinyArc,
+};
+
+enum class AccentMark : uint8_t {
+    None,
+    Blush,
+    Tears,
+    Sweat,
+    Anger,
+};
+
 struct EyePose {
     Vec2 center;
     Vec2 size;
     float rotation_degrees;
-    float lid_open;      // [0, 1], fully closed to fully open
-    Vec2 pupil_offset;   // [-1, 1] inside the eye
-    float pupil_scale;   // Relative to the smaller eye dimension
+    float openness;  // [0, 1], closed eyes reduce to a short stroke.
+    EyeGlyph glyph;
+    EyeGlyph previous_glyph;
+    float glyph_blend;  // [0, 1], cross-fade from previous_glyph to glyph.
 };
 
 struct MouthPose {
     Vec2 center;
     float width;
-    float curve_depth;  // Positive values form a smile.
+    float curve_depth;
     float thickness;
-    float openness;     // [0, 1], adds a filled mouth below the curve.
+    float openness;
+    MouthGlyph glyph;
+    MouthGlyph previous_glyph;
+    float glyph_blend;  // [0, 1], cross-fade from previous_glyph to glyph.
 };
 
 struct FacePalette {
     Color background;
     Color feature;
-    Color pupil;
-    Color blush;
+    Color accent;
 };
 
 struct FacePose {
@@ -50,8 +79,9 @@ struct FacePose {
     EyePose right_eye;
     MouthPose mouth;
     FacePalette palette;
-    float blush_intensity;  // [0, 1]
-    float visual_tilt;      // Degrees; display-only, never servo motion.
+    AccentMark accent_mark;
+    float accent_intensity;  // [0, 1]
+    float visual_tilt;       // Degrees; display-only, never servo motion.
 };
 
 enum class ExpressionId {

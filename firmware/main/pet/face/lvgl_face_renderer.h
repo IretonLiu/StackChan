@@ -27,18 +27,21 @@ public:
     void render(const FacePose& pose);
 
 private:
-    void renderEye(const EyePose& eye, lv_obj_t* eye_object, lv_obj_t* pupil_object, lv_obj_t* lid_object,
-                   const FacePalette& palette);
+    void renderEyeGlyph(EyeGlyph glyph, const EyePose& eye, Color feature, float opacity, size_t slot);
+    void renderMouthGlyph(MouthGlyph glyph, const MouthPose& mouth, Color feature, float opacity, size_t slot);
+    void renderAccent(const FacePose& pose);
     static lv_color_t toLvColor(Color color);
 
     lv_obj_t* root_ = nullptr;
-    std::array<lv_obj_t*, 2> eyes_{};
-    std::array<lv_obj_t*, 2> pupils_{};
-    std::array<lv_obj_t*, 2> lids_{};
-    std::array<lv_obj_t*, 2> blushes_{};
-    lv_obj_t* mouth_ = nullptr;
-    lv_obj_t* open_mouth_ = nullptr;
-    std::array<lv_point_precise_t, 9> mouth_points_{};
+    std::array<lv_obj_t*, 4> eye_lines_{};
+    std::array<lv_obj_t*, 4> eye_shapes_{};
+    std::array<std::array<lv_point_precise_t, 5>, 4> eye_points_{};
+    std::array<lv_obj_t*, 2> mouth_lines_{};
+    std::array<lv_obj_t*, 2> mouth_shapes_{};
+    std::array<std::array<lv_point_precise_t, 5>, 2> mouth_points_{};
+    std::array<lv_obj_t*, 2> accent_shapes_{};
+    lv_obj_t* accent_line_ = nullptr;
+    std::array<lv_point_precise_t, 6> accent_points_{};
 };
 
 }  // namespace pet::face
