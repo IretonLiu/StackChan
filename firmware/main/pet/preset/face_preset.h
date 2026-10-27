@@ -3,6 +3,8 @@
  */
 #pragma once
 
+#include "face_motion.h"
+
 #include <pet/shape/circle.h>
 #include <pet/shape/rounded_polygon.h>
 
@@ -24,6 +26,8 @@ struct FacePresetNodeDefinition {
     int8_t parent_index = -1;
     shape::CircleParameters circle{};
     shape::RoundedPolygonParameters rounded_polygon{};
+    KeyframeMotion motion{};
+    MotionEasing motion_easing = MotionEasing::Linear;
 };
 
 struct FacePresetDefinition {

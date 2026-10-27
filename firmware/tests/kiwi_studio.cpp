@@ -23,16 +23,6 @@ constexpr size_t kMaxNodes     = 16;
 constexpr float kDisplayWidth  = 320.0f;
 constexpr float kDisplayHeight = 240.0f;
 enum class Kind { Circle, Polygon };
-struct Node {
-    std::string id;
-    Kind kind = Kind::Circle;
-    PathStyle style{};
-    Transform2D transform{};
-    CircleParameters circle{{160, 120}, 20};
-    RoundedPolygonParameters polygon{};
-    int parent_index = -1;
-    bool visible     = true;
-};
 struct MotionPreview {
     bool enabled       = false;
     bool playing       = false;
@@ -47,6 +37,17 @@ struct MotionPreview {
     float duration_seconds = 2.0f;
     pet::preset::KeyframeMotion keyframes{};
     pet::preset::MotionEasing easing = pet::preset::MotionEasing::Linear;
+};
+struct Node {
+    std::string id;
+    Kind kind = Kind::Circle;
+    PathStyle style{};
+    Transform2D transform{};
+    CircleParameters circle{{160, 120}, 20};
+    RoundedPolygonParameters polygon{};
+    int parent_index = -1;
+    bool visible     = true;
+    MotionPreview motion{};
 };
 
 struct Scene {
@@ -535,6 +536,24 @@ bool save(const Scene& s, const char* filename)
                 e["end"]         = o.polygon.edges[j].end;
             }
         }
+        auto motion                = n["motion"].to<JsonObject>();
+        motion["enabled"]          = o.motion.enabled;
+        motion["loop"]             = o.motion.loop;
+        motion["use_keyframes"]    = o.motion.use_keyframes;
+        motion["property"]         = o.motion.property;
+        motion["amplitude"]        = o.motion.amplitude;
+        motion["period_seconds"]   = o.motion.period_seconds;
+        motion["phase_radians"]    = o.motion.phase_radians;
+        motion["duration_seconds"] = o.motion.duration_seconds;
+        motion["easing"]           = (o.motion.easing == pet::preset::MotionEasing::Linear) ? "linear" : "smoothstep";
+        if (o.motion.keyframes.count > 0) {
+            auto kfs = motion["keyframes"].to<JsonArray>();
+            for (int k = 0; k < o.motion.keyframes.count; ++k) {
+                auto kf            = kfs.add<JsonObject>();
+                kf["time_seconds"] = o.motion.keyframes.keyframes[k].time_seconds;
+                kf["value"]        = o.motion.keyframes.keyframes[k].value;
+            }
+        }
     }
     std::ofstream f(filename);
     if (!f) return false;
@@ -684,6 +703,107 @@ bool readTransform(JsonVariantConst value, Transform2D& transform, std::string& 
     if (!object["pivot"].isNull() && !readPoint(object["pivot"], transform.pivot)) {
         error = where + ".pivot: must be a two-number array";
         return false;
+    }
+    return true;
+}
+
+bool readMotion(JsonVariantConst value, MotionPreview& motion, std::string& error, const std::string& where)
+{
+    if (value.isNull()) return true;
+    if (!value.is<JsonObjectConst>()) {
+        error = where + ": must be an object";
+        return false;
+    }
+    JsonObjectConst object = value.as<JsonObjectConst>();
+    if (!rejectUnknown(object,
+                       {"enabled", "loop", "use_keyframes", "property", "amplitude", "period_seconds", "phase_radians",
+                        "duration_seconds", "easing", "keyframes"},
+                       error, where))
+        return false;
+    if (!object["enabled"].isNull()) {
+        if (!object["enabled"].is<bool>()) {
+            error = where + ".enabled: must be a boolean";
+            return false;
+        }
+        motion.enabled = object["enabled"].as<bool>();
+    }
+    if (!object["loop"].isNull()) {
+        if (!object["loop"].is<bool>()) {
+            error = where + ".loop: must be a boolean";
+            return false;
+        }
+        motion.loop = object["loop"].as<bool>();
+    }
+    if (!object["use_keyframes"].isNull()) {
+        if (!object["use_keyframes"].is<bool>()) {
+            error = where + ".use_keyframes: must be a boolean";
+            return false;
+        }
+        motion.use_keyframes = object["use_keyframes"].as<bool>();
+    }
+    if (!object["property"].isNull()) {
+        if (!object["property"].is<int>()) {
+            error = where + ".property: must be an integer";
+            return false;
+        }
+        motion.property = object["property"].as<int>();
+    }
+    if (!object["amplitude"].isNull() && !readNumber(object["amplitude"], motion.amplitude)) {
+        error = where + ".amplitude: must be a finite number";
+        return false;
+    }
+    if (!object["period_seconds"].isNull() && !readNumber(object["period_seconds"], motion.period_seconds)) {
+        error = where + ".period_seconds: must be a finite number";
+        return false;
+    }
+    if (!object["phase_radians"].isNull() && !readNumber(object["phase_radians"], motion.phase_radians)) {
+        error = where + ".phase_radians: must be a finite number";
+        return false;
+    }
+    if (!object["duration_seconds"].isNull() && !readNumber(object["duration_seconds"], motion.duration_seconds)) {
+        error = where + ".duration_seconds: must be a finite number";
+        return false;
+    }
+    if (!object["easing"].isNull()) {
+        if (!object["easing"].is<const char*>()) {
+            error = where + ".easing: must be linear or smoothstep";
+            return false;
+        }
+        const char* easing = object["easing"];
+        if (strcmp(easing, "linear") == 0)
+            motion.easing = pet::preset::MotionEasing::Linear;
+        else if (strcmp(easing, "smoothstep") == 0)
+            motion.easing = pet::preset::MotionEasing::Smoothstep;
+        else {
+            error = where + ".easing: must be linear or smoothstep";
+            return false;
+        }
+    }
+    JsonArrayConst keyframes = object["keyframes"].as<JsonArrayConst>();
+    if (!keyframes.isNull()) {
+        motion.keyframes.count = 0;
+        for (JsonVariantConst keyframe : keyframes) {
+            if (motion.keyframes.count >= pet::preset::kMaxMotionKeyframes) {
+                error = where + ".keyframes: contains too many keyframes";
+                return false;
+            }
+            if (!keyframe.is<JsonObjectConst>()) {
+                error = where + ".keyframes: must contain objects";
+                return false;
+            }
+            JsonObjectConst keyframe_object = keyframe.as<JsonObjectConst>();
+            if (!rejectUnknown(keyframe_object, {"time_seconds", "value"}, error, where + ".keyframes")) return false;
+            auto& destination = motion.keyframes.keyframes[motion.keyframes.count];
+            if (!readNumber(keyframe_object["time_seconds"], destination.time_seconds)) {
+                error = where + ".keyframes.time_seconds: must be a finite number";
+                return false;
+            }
+            if (!readNumber(keyframe_object["value"], destination.value)) {
+                error = where + ".keyframes.value: must be a finite number";
+                return false;
+            }
+            ++motion.keyframes.count;
+        }
     }
     return true;
 }
@@ -887,6 +1007,7 @@ bool load(Scene& scene, const char* filename, std::string& error)
 
         if (!readStyle(source["style"], node.style, error, where + ".style")) return false;
         if (!readTransform(source["transform"], node.transform, error, where + ".transform")) return false;
+        if (!readMotion(source["motion"], node.motion, error, where + ".motion")) return false;
 
         JsonVariantConst parent_value = source["parent"];
         if (!parent_value.isNull()) {

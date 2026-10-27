@@ -89,6 +89,53 @@ def cross(a, b, c):
     return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
 
 
+
+def parse_motion(value, where):
+    if value is None:
+        return None
+    value = obj(value, where)
+    require_keys(value, {"enabled", "loop", "use_keyframes", "property", "amplitude", "period_seconds",
+                          "phase_radians", "duration_seconds", "easing", "keyframes"}, where)
+    result = {}
+    enabled = value.get("enabled", False)
+    if not isinstance(enabled, bool):
+        fail(where + ".enabled", "must be a boolean")
+    result["enabled"] = enabled
+    loop = value.get("loop", False)
+    if not isinstance(loop, bool):
+        fail(where + ".loop", "must be a boolean")
+    result["loop"] = loop
+    use_keyframes = value.get("use_keyframes", False)
+    if not isinstance(use_keyframes, bool):
+        fail(where + ".use_keyframes", "must be a boolean")
+    result["use_keyframes"] = use_keyframes
+    prop = value.get("property", 0)
+    if not isinstance(prop, int) or not 0 <= prop <= 8:
+        fail(where + ".property", "must be an integer 0..8")
+    result["property"] = prop
+    result["amplitude"] = number(value.get("amplitude", 0), where + ".amplitude")
+    result["period_seconds"] = number(value.get("period_seconds", 1), where + ".period_seconds")
+    result["phase_radians"] = number(value.get("phase_radians", 0), where + ".phase_radians")
+    keyframes = value.get("keyframes", [])
+    if not isinstance(keyframes, list):
+        fail(where + ".keyframes", "must be an array")
+    if len(keyframes) > 8:
+        fail(where + ".keyframes", "must contain at most 8 keyframes")
+    parsed_keyframes = []
+    for index, raw in enumerate(keyframes):
+        raw = obj(raw, f"{where}.keyframes[{index}]")
+        require_keys(raw, {"time_seconds", "value"}, f"{where}.keyframes[{index}]")
+        time = number(raw.get("time_seconds", 0), f"{where}.keyframes[{index}].time_seconds")
+        val = number(raw.get("value", 0), f"{where}.keyframes[{index}].value")
+        parsed_keyframes.append((time, val))
+    result["keyframes"] = parsed_keyframes
+    result["duration_seconds"] = number(value.get("duration_seconds", 1), where + ".duration_seconds")
+    easing = value.get("easing", "linear")
+    if easing not in ("linear", "smoothstep"):
+        fail(where + ".easing", "must be linear or smoothstep")
+    result["easing"] = easing
+    return result
+
 def parse_polygon(value, where):
     value = obj(value, where)
     require_keys(value, {"vertices", "corners", "edges"}, where)
@@ -140,7 +187,7 @@ def parse_scene(path):
     seen, parsed = set(), []
     for index, raw in enumerate(nodes):
         where = f"{path}.nodes[{index}]"; raw = obj(raw, where)
-        require_keys(raw, {"id", "kind", "parent", "style", "transform", "circle", "rounded_polygon"}, where)
+        require_keys(raw, {"id", "kind", "parent", "style", "transform", "circle", "rounded_polygon", "motion"}, where)
         node_id, kind = raw.get("id"), raw.get("kind")
         if not isinstance(node_id, str) or not ID.fullmatch(node_id) or node_id in seen: fail(where + ".id", "must be a unique lowercase kebab-case id")
         parent = raw.get("parent")
@@ -155,6 +202,7 @@ def parse_scene(path):
             node["circle"] = (point(circle.get("center"), where + ".circle.center"), number(circle.get("radius"), where + ".circle.radius"))
             if node["circle"][1] <= 0: fail(where + ".circle.radius", "must be positive")
         else: node["polygon"] = parse_polygon(raw.get("rounded_polygon"), where + ".rounded_polygon")
+        node["motion"] = parse_motion(raw.get("motion"), where + ".motion")
         parsed.append(node)
     return {"id": scene_id, "background": color(value.get("background"), str(path) + ".background"), "nodes": parsed}
 
@@ -175,12 +223,26 @@ def emit(scenes, output):
         for node in scene["nodes"]:
             s, t = node["style"], node["transform"]
             prefix = f'{{ShapeKind::{"Circle" if node["kind"] == "circle" else "RoundedPolygon"}, {{{c(s["color"])}, {f(s["opacity"])}, {f(s["stroke_width"])}, {str(s["fill"]).lower()}, {str(s["stroke"]).lower()}}}, {{{v(t["translation"])}, {f(t["rotation"])}, {v(t["scale"])}, {v(t["pivot"])}}}, {node["parent_index"]}, '
+            motion = node.get("motion")
+            if motion is None:
+                motion_str = "{{}, 0, false, 0.0f}, MotionEasing::Linear"
+            else:
+                keyframes = motion["keyframes"]
+                if keyframes:
+                    kf_str = "{" + ", ".join("{" + f(t) + ", " + f(v) + "}" for t, v in keyframes) + "}"
+                else:
+                    kf_str = "{}"
+                motion_str = "{" + kf_str + ", " + str(len(keyframes)) + ", " + str(motion["loop"]).lower() + ", " + f(motion["duration_seconds"]) + "}, MotionEasing::" + motion["easing"].capitalize()
+
             if node["kind"] == "circle":
-                center, radius = node["circle"]; lines.append(prefix + f"{{{v(center)}, {f(radius)}}}, {{}}}},")
+                center, radius = node["circle"]
+                lines.append(prefix + "{" + v(center) + ", " + f(radius) + "}, {}, " + motion_str + "},")
             else:
                 vertices, corners, edges = node["polygon"]
-                vs = ", ".join(v(x) for x in vertices); cs = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + "}" for x in corners); es = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + ", " + f(x[2]) + "}" for x in edges)
-                lines.append(prefix + "{{}, 0.0f}, {" + str(len(vertices)) + ", {{" + vs + "}}, {{" + cs + "}}, {{" + es + "}}}},")
+                vs = ", ".join(v(x) for x in vertices)
+                cs = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + "}" for x in corners)
+                es = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + ", " + f(x[2]) + "}" for x in edges)
+                lines.append(prefix + "{}, {" + str(len(vertices)) + ", {{" + vs + "}}, {{" + cs + "}}, {{" + es + "}}}, " + motion_str + "},")
         lines += ["};", f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}}};", ""]
     lines.append("inline constexpr const FacePresetDefinition* kFacePresets[] = {")
     for scene in scenes:
