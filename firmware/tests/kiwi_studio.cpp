@@ -302,9 +302,14 @@ bool canvas(Scene& s, View& view)
 {
     ImGui::BeginChild("canvas", {}, true);
     Scene display = s;
-    if (view.motion.playing && display.selected >= 0 && size_t(display.selected) < display.count) {
+    if (view.motion.playing) {
         const uint32_t elapsed_ms = static_cast<uint32_t>(std::max(0.0f, view.motion.time_seconds) * 1000.0f);
-        applyMotion(display.nodes[display.selected], view.motion, elapsed_ms);
+        for (size_t index = 0; index < display.count; ++index) {
+            MotionPreview preview = display.nodes[index].motion;
+            preview.playing       = true;
+            preview.time_seconds  = view.motion.time_seconds;
+            if (preview.enabled) applyMotion(display.nodes[index], preview, elapsed_ms);
+        }
     }
     auto a          = ImGui::GetContentRegionAvail();
     const float fit = std::max(.1f, std::min((a.x - 10) / kDisplayWidth, (a.y - 10) / kDisplayHeight));
@@ -1282,7 +1287,7 @@ bool validateScene(const Scene& scene, std::string& error)
     return true;
 }
 
-enum class Pending { None, New, Reset, Load };
+enum class Pending { None, New, Reset, Load, Quit };
 
 int nodeDepth(const Scene& scene, int index)
 {
@@ -1532,38 +1537,40 @@ bool inspector(Scene& s, View& view)
     changed |= pointField("Scale", n.transform.scale, {1.0f, 1.0f}, .01f, -240.0f, 240.0f);
     changed |= pointField("Pivot", n.transform.pivot, {}, .5f);
 
-    ImGui::SeparatorText("Motion preview");
-    MotionPreview& motion = view.motion;
-    changed |= ImGui::Checkbox("Enable", &motion.enabled);
+    ImGui::SeparatorText("Motion");
+    MotionPreview& motion = n.motion;
+    changed |= ImGui::Checkbox("Enabled", &motion.enabled);
     ImGui::SameLine();
-    if (ImGui::Checkbox("Play", &motion.playing) && motion.playing) motion.enabled = true;
+    ImGui::Checkbox("Preview playing", &view.motion.playing);
     ImGui::SameLine();
-    ImGui::Checkbox("Loop", &motion.loop);
+    changed |= ImGui::Checkbox("Loop", &motion.loop);
     const char* properties[] = {"Translate X", "Translate Y", "Rotation", "Scale X",   "Scale Y",
                                 "Opacity",     "Circle R",    "Corner R", "Edge bulge"};
     ImGui::SetNextItemWidth(160.0f);
-    ImGui::Combo("Property", &motion.property, properties, 9);
+    changed |= ImGui::Combo("Property", &motion.property, properties, 9);
     ImGui::SetNextItemWidth(160.0f);
-    ImGui::Combo("Type", reinterpret_cast<int*>(&motion.use_keyframes), "Loop\0Keyframes\0");
+    changed |= ImGui::Combo("Type", reinterpret_cast<int*>(&motion.use_keyframes), "Loop\0Keyframes\0");
     if (!motion.use_keyframes) {
         ImGui::SetNextItemWidth(160.0f);
-        ImGui::DragFloat("Amplitude", &motion.amplitude, .1f, -4096.0f, 4096.0f, "%.2f");
+        changed |= ImGui::DragFloat("Amplitude", &motion.amplitude, .1f, -4096.0f, 4096.0f, "%.2f");
         ImGui::SetNextItemWidth(160.0f);
-        ImGui::DragFloat("Period", &motion.period_seconds, .01f, .1f, 10.0f, "%.2f s");
+        changed |= ImGui::DragFloat("Period", &motion.period_seconds, .01f, .1f, 10.0f, "%.2f s");
         ImGui::SetNextItemWidth(160.0f);
-        ImGui::DragFloat("Phase", &motion.phase_radians, .01f, -3.14159f, 3.14159f, "%.2f rad");
+        changed |= ImGui::DragFloat("Phase", &motion.phase_radians, .01f, -3.14159f, 3.14159f, "%.2f rad");
     } else {
         ImGui::SetNextItemWidth(160.0f);
-        ImGui::DragFloat("Duration", &motion.keyframes.duration_seconds, .01f, .1f, 10.0f, "%.2f s");
-        ImGui::Checkbox("Loop keyframes", &motion.keyframes.loop);
+        changed |=
+            ImGui::DragFloat("Keyframe duration", &motion.keyframes.duration_seconds, .01f, .1f, 10.0f, "%.2f s");
+        changed |= ImGui::Checkbox("Loop keyframes", &motion.keyframes.loop);
         for (int index = 0; index < motion.keyframes.count; ++index) {
             ImGui::PushID(index);
             ImGui::SetNextItemWidth(100.0f);
-            ImGui::DragFloat("Time", &motion.keyframes.keyframes[index].time_seconds, .01f, 0.0f,
-                             motion.keyframes.duration_seconds, "%.2f s");
+            changed |= ImGui::DragFloat("Time", &motion.keyframes.keyframes[index].time_seconds, .01f, 0.0f,
+                                        motion.keyframes.duration_seconds, "%.2f s");
             ImGui::SameLine();
             ImGui::SetNextItemWidth(100.0f);
-            ImGui::DragFloat("Value", &motion.keyframes.keyframes[index].value, .1f, -4096.0f, 4096.0f, "%.2f");
+            changed |=
+                ImGui::DragFloat("Value", &motion.keyframes.keyframes[index].value, .1f, -4096.0f, 4096.0f, "%.2f");
             ImGui::PopID();
         }
         if (motion.keyframes.count < pet::preset::kMaxMotionKeyframes && ImGui::Button("Add keyframe")) {
@@ -1571,18 +1578,28 @@ bool inspector(Scene& s, View& view)
             float* target = motionTarget(n, motion.property, range);
             if (target != nullptr) {
                 auto& frame            = motion.keyframes.keyframes[motion.keyframes.count];
-                frame.time_seconds     = motion.time_seconds;
+                frame.time_seconds     = view.motion.time_seconds;
                 frame.value            = *target;
                 motion.keyframes.count = uint8_t(motion.keyframes.count + 1);
+                changed                = true;
             }
         }
-        if (motion.keyframes.count > 0 && ImGui::Button("Remove last keyframe")) --motion.keyframes.count;
+        if (motion.keyframes.count > 0 && ImGui::Button("Remove last keyframe")) {
+            --motion.keyframes.count;
+            changed = true;
+        }
     }
     ImGui::SetNextItemWidth(160.0f);
-    ImGui::DragFloat("Duration", &motion.duration_seconds, .01f, .1f, 10.0f, "%.2f s");
+    int easing_index = motion.easing == pet::preset::MotionEasing::Smoothstep ? 1 : 0;
+    if (ImGui::Combo("Easing", &easing_index, "Linear\0Smoothstep\0")) {
+        motion.easing = easing_index == 1 ? pet::preset::MotionEasing::Smoothstep : pet::preset::MotionEasing::Linear;
+        changed       = true;
+    }
     ImGui::SetNextItemWidth(160.0f);
-    ImGui::DragFloat("Time", &motion.time_seconds, .01f, 0.0f, motion.duration_seconds, "%.2f s");
-    if (ImGui::Button("Restart")) motion.time_seconds = 0.0f;
+    ImGui::DragFloat("Preview duration", &view.motion.duration_seconds, .01f, .1f, 10.0f, "%.2f s");
+    ImGui::SetNextItemWidth(160.0f);
+    ImGui::DragFloat("Preview time", &view.motion.time_seconds, .01f, 0.0f, view.motion.duration_seconds, "%.2f s");
+    if (ImGui::Button("Restart preview")) view.motion.time_seconds = 0.0f;
     ImGui::SameLine();
     if (ImGui::Button("Blink (scale Y)")) {
         motion.property                   = 4;
@@ -1596,8 +1613,9 @@ bool inspector(Scene& s, View& view)
         motion.keyframes.keyframes[2]     = {0.16f, 1.0f};
         motion.keyframes.keyframes[3]     = {1.0f, 1.0f};
         motion.enabled                    = true;
-        motion.playing                    = true;
-        motion.time_seconds               = 0.0f;
+        view.motion.playing               = true;
+        view.motion.time_seconds          = 0.0f;
+        changed                           = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Ear twitch (rotation)")) {
@@ -1612,8 +1630,9 @@ bool inspector(Scene& s, View& view)
         motion.keyframes.keyframes[2]     = {0.24f, 0.0f};
         motion.keyframes.keyframes[3]     = {1.0f, 0.0f};
         motion.enabled                    = true;
-        motion.playing                    = true;
-        motion.time_seconds               = 0.0f;
+        view.motion.playing               = true;
+        view.motion.time_seconds          = 0.0f;
+        changed                           = true;
     }
     return changed;
 }
@@ -1674,8 +1693,18 @@ int main(int argc, char** argv)
     bool validation_modal_open = false;
     std::string validation_log;
     reset(s);
-    while (!glfwWindowShouldClose(w)) {
+    bool running = true;
+    while (running) {
         glfwPollEvents();
+        if (glfwWindowShouldClose(w)) {
+            glfwSetWindowShouldClose(w, GLFW_FALSE);
+            if (s.dirty) {
+                if (pending == Pending::None) pending = Pending::Quit;
+            } else {
+                running = false;
+                break;
+            }
+        }
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -1785,6 +1814,8 @@ int main(int argc, char** argv)
                     replaced_action = true;
                 } else if (action == Pending::Load) {
                     replaced_action = loadScene(s);
+                } else if (action == Pending::Quit) {
+                    running = false;
                 }
                 if (replaced_action) {
                     history.undo.clear();
