@@ -3,31 +3,12 @@
  */
 #pragma once
 
+#include "rounded_polygon_controls.h"
 #include "shape_path.h"
 
 #include <array>
 
 namespace pet::shape {
-
-/**
- * A rounded-corner patch. Its two cubic controls are authored from this
- * bounded shape data; adjoining edge controls are derived from its tangents.
- */
-struct CornerControls {
-    float roundness = 0.08f;
-    float cap_tension = 0.55f;
-};
-
-/**
- * Handle lengths for one directed edge. Directions are never independently
- * editable: the preceding/following corner patches own those tangent rails.
- */
-struct EdgeTension {
-    // Shared tangent-rail bend: positive values bow the directed edge outward.
-    float bulge = 0.0f;
-    float start = 0.28f;
-    float end = 0.28f;
-};
 
 /**
  * Semantic controls for the first `soft_polygon` template: a three-landmark

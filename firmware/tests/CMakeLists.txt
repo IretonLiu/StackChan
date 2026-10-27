@@ -47,6 +47,8 @@ add_test(NAME face_expression_test COMMAND $<TARGET_FILE:face_expression_test>)
 
 add_executable(shape_core_test
     shape_core_test.cpp
+    ../main/pet/shape/circle.cpp
+    ../main/pet/shape/rounded_polygon.cpp
     ../main/pet/shape/shape_path.cpp
     ../main/pet/shape/shape_face_adapter.cpp
     ../main/pet/shape/soft_polygon.cpp
@@ -76,6 +78,7 @@ target_compile_features(face_preview PRIVATE cxx_std_17)
 add_executable(shape_preview
     shape_preview.cpp
     ../main/pet/shape/shape_path.cpp
+    ../main/pet/shape/rounded_polygon.cpp
     ../main/pet/shape/soft_polygon.cpp
 )
 
@@ -99,6 +102,7 @@ if(STACKCHAN_BUILD_SHAPE_STUDIO)
     add_executable(shape_studio
         shape_studio.cpp
         ../main/pet/shape/shape_path.cpp
+        ../main/pet/shape/rounded_polygon.cpp
         ../main/pet/shape/soft_polygon.cpp
         ${IMGUI_DIR}/imgui.cpp
         ${IMGUI_DIR}/imgui_draw.cpp

@@ -1,6 +1,8 @@
 /*
  * SPDX-License-Identifier: MIT
  */
+#include <pet/shape/circle.h>
+#include <pet/shape/rounded_polygon.h>
 #include <pet/shape/shape_face_adapter.h>
 #include <pet/shape/soft_polygon.h>
 
@@ -170,6 +172,50 @@ void testNonFiniteInputsAreRejected()
     assert(sample.error == pet::shape::SoftPolygonEarSampleError::NonFiniteStyle);
 }
 
+void testRoundedPolygonAndCircle()
+{
+    pet::shape::RoundedPolygonParameters polygon;
+    polygon.vertex_count = 5;
+    polygon.vertices = {{{0.0f, -1.0f}, {0.95f, -0.3f}, {0.59f, 0.81f}, {-0.59f, 0.81f}, {-0.95f, -0.3f}}};
+    for (uint8_t index = 0; index < polygon.vertex_count; ++index) {
+        polygon.corners[index] = {0.12f, 0.55f};
+        polygon.edges[index] = {(index % 2 == 0) ? 0.20f : -0.12f, 0.28f, 0.28f};
+    }
+    pet::shape::RoundedPolygonSample polygon_sample;
+    assert(pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
+    assert(polygon_sample.path.command_count == 12);
+    assert(polygon_sample.path.commands[0].type == PathCommandType::Move);
+    assert(polygon_sample.path.commands[11].type == PathCommandType::Close);
+    for (uint8_t index = 0; index < polygon.vertex_count; ++index) {
+        const size_t next_corner = (index + 1) % polygon.vertex_count;
+        const auto& edge = polygon_sample.edges[index];
+        const auto& following_corner = polygon_sample.corners[next_corner];
+        const auto& preceding_corner = polygon_sample.corners[index];
+        assert(std::abs(cross(subtract(edge.end, edge.second_control),
+                              subtract(following_corner.first_control, following_corner.start))) < 0.0001f);
+        assert(std::abs(cross(subtract(preceding_corner.end, preceding_corner.second_control),
+                              subtract(edge.first_control, edge.start))) < 0.0001f);
+    }
+
+    polygon.vertex_count = 2;
+    assert(!pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
+    assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::InvalidVertexCount);
+    polygon.vertex_count = 4;
+    polygon.vertices = {{{-1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}, {1.0f, -1.0f}}};
+    assert(!pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
+    assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::DegenerateOrNonConvex);
+
+    pet::shape::CircleSample circle;
+    pet::shape::CircleParameters circle_parameters{{0.0f, 0.0f}, 1.0f};
+    assert(pet::shape::sampleCircle(circle_parameters, {}, circle));
+    assert(circle.path.command_count == 6);
+    assert(circle.path.commands[0].type == PathCommandType::Move);
+    assert(circle.path.commands[5].type == PathCommandType::Close);
+    circle_parameters.radius = 0.0f;
+    assert(!pet::shape::sampleCircle(circle_parameters, {}, circle));
+    assert(circle.error == pet::shape::CircleSampleError::InvalidRadius);
+}
+
 void testShapePathFlowsToFirmwareDrawing()
 {
     pet::shape::SoftPolygonEarSample sample;
@@ -221,6 +267,7 @@ int main()
     testEveryEdgeCornerJoinIsTangentAligned();
     testParameterClamping();
     testNonFiniteInputsAreRejected();
+    testRoundedPolygonAndCircle();
     testShapePathFlowsToFirmwareDrawing();
     std::cout << "shape core tests passed\n";
 }
