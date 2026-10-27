@@ -12,6 +12,16 @@ COMPILER = FIRMWARE / "tools" / "compile_face_presets.py"
 VALID = FIRMWARE / "pet_faces" / "idle.petface.json"
 
 
+def set_circle_radius(scene, radius):
+    # The visual default may change primitive kinds; keep scalar validation
+    # coverage independent of that authored scene layout.
+    scene["nodes"][2] = {
+        "id": "test-circle",
+        "kind": "circle",
+        "circle": {"center": [160, 120], "radius": radius},
+    }
+
+
 class FacePresetCompilerTest(unittest.TestCase):
     def compile(self, source, output):
         return subprocess.run([sys.executable, str(COMPILER), str(source), "--output", str(output)],
@@ -34,11 +44,11 @@ class FacePresetCompilerTest(unittest.TestCase):
         base = json.loads(VALID.read_text())
         cases = [
             ("unknown-kind", lambda value: value["nodes"][0].update(kind="spline"), "must be circle or rounded_polygon"),
-            ("zero-circle", lambda value: value["nodes"][2]["circle"].update(radius=0), "must be positive"),
+            ("zero-circle", lambda value: set_circle_radius(value, 0), "must be positive"),
             ("concave", lambda value: value["nodes"][0]["rounded_polygon"].update(vertices=[[0, 0], [1, 0], [0.2, 0.2], [0, 1]]), "consistent winding"),
             ("unknown-field", lambda value: value.update(unexpected=True), "unknown field"),
             ("unknown-parent", lambda value: value["nodes"][1].update(parent="not-a-node"), "must name an earlier node"),
-            ("overflow", lambda value: value["nodes"][2]["circle"].update(radius=1e100), "must fit a finite C++ float"),
+            ("overflow", lambda value: set_circle_radius(value, 1e100), "must fit a finite C++ float"),
             ("invalid-style", lambda value: value["nodes"][0].update(style=[]), "must be an object"),
         ]
         with tempfile.TemporaryDirectory() as directory:

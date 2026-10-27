@@ -64,11 +64,17 @@ struct Scene {
 struct View {
     float zoom = 1.0f;
     ImVec2 pan{};
-    bool frame_requested = false;
-    bool reset_requested = false;
-    bool show_bounds     = false;
-    bool show_guides     = false;
-    bool show_vertices   = true;
+    bool frame_requested      = false;
+    bool reset_requested      = false;
+    bool show_bounds          = false;
+    bool show_guides          = false;
+    bool show_vertices        = true;
+    bool show_bezier_controls = false;
+    int drag_node             = -1;
+    // Control-handle drag state. kind: 0=edge first, 1=edge second, 2=corner first, 3=corner second.
+    int drag_handle_node  = -1;
+    int drag_handle_kind  = -1;
+    int drag_handle_index = -1;
     MotionPreview motion{};
 };
 
@@ -369,6 +375,80 @@ bool canvas(Scene& s, View& view)
     if (!hierarchy_valid) {
         d->AddText({o.x + 4, o.y + 4}, IM_COL32(255, 120, 120, 255), "Invalid parent ordering");
     }
+
+    // --- Control-handle geometry -------------------------------------------------
+    // Built once per frame so drawing and hit-testing share identical screen
+    // positions. Handles are derived from the polygon's local cubic geometry and
+    // pushed through the node's world transform.
+    const auto vsub  = [](Vec2 left, Vec2 right) { return Vec2{left.x - right.x, left.y - right.y}; };
+    const auto vdot  = [](Vec2 left, Vec2 right) { return left.x * right.x + left.y * right.y; };
+    const auto vlen  = [](Vec2 value) { return std::sqrt(value.x * value.x + value.y * value.y); };
+    const auto vnorm = [&](Vec2 value) {
+        const float len = vlen(value);
+        return len > 1e-6f ? Vec2{value.x / len, value.y / len} : Vec2{};
+    };
+    struct CanvasHandle {
+        int kind  = 0;  // 0=edge first, 1=edge second, 2=corner first, 3=corner second
+        int index = 0;
+        ImVec2 point{};
+        ImVec2 anchor{};
+    };
+    constexpr size_t kMaxCanvasHandles = kMaxRoundedPolygonVertices * 4;
+    std::array<CanvasHandle, kMaxCanvasHandles> canvas_handles{};
+    size_t canvas_handle_count = 0;
+    bool handle_edit_ready     = false;
+    Affine2D handle_world_inverse{};
+    RoundedPolygonSample handle_sample{};
+    int hovered_handle = -1;
+
+    const auto to_screen = [&](const Affine2D& world, Vec2 local) {
+        const Vec2 transformed = transformPoint(world, local);
+        return ImVec2{o.x + transformed.x * z, o.y + transformed.y * z};
+    };
+
+    if (hierarchy_valid && view.show_bezier_controls && s.selected >= 0 &&
+        s.selected < static_cast<int>(display.count)) {
+        const Node& selected = display.nodes[s.selected];
+        if (selected.visible && selected.kind == Kind::Polygon &&
+            sampleRoundedPolygon(selected.polygon, worlds[s.selected], handle_sample, selected.style) &&
+            invert(worlds[s.selected], handle_world_inverse)) {
+            handle_edit_ready          = true;
+            const uint8_t vertex_count = handle_sample.parameters.vertex_count;
+            for (uint8_t edge_index = 0; edge_index < vertex_count; ++edge_index) {
+                const auto& edge                      = handle_sample.edges[edge_index];
+                canvas_handles[canvas_handle_count++] = {0, edge_index,
+                                                         to_screen(worlds[s.selected], edge.first_control),
+                                                         to_screen(worlds[s.selected], edge.start)};
+                canvas_handles[canvas_handle_count++] = {1, edge_index,
+                                                         to_screen(worlds[s.selected], edge.second_control),
+                                                         to_screen(worlds[s.selected], edge.end)};
+            }
+            for (uint8_t corner_index = 0; corner_index < vertex_count; ++corner_index) {
+                const auto& corner                    = handle_sample.corners[corner_index];
+                canvas_handles[canvas_handle_count++] = {2, corner_index,
+                                                         to_screen(worlds[s.selected], corner.first_control),
+                                                         to_screen(worlds[s.selected], corner.start)};
+                canvas_handles[canvas_handle_count++] = {3, corner_index,
+                                                         to_screen(worlds[s.selected], corner.second_control),
+                                                         to_screen(worlds[s.selected], corner.end)};
+            }
+            if (ImGui::IsWindowHovered()) {
+                const ImVec2 mouse = ImGui::GetIO().MousePos;
+                float best         = 12.0f;
+                for (size_t h = 0; h < canvas_handle_count; ++h) {
+                    const float dx       = mouse.x - canvas_handles[h].point.x;
+                    const float dy       = mouse.y - canvas_handles[h].point.y;
+                    const float distance = std::sqrt(dx * dx + dy * dy);
+                    if (distance <= best) {
+                        best           = distance;
+                        hovered_handle = static_cast<int>(h);
+                    }
+                }
+            }
+        }
+    }
+    // -----------------------------------------------------------------------------
+
     for (size_t i = 0; hierarchy_valid && i < display.count; i++) {
         const Node& node = display.nodes[i];
         if (!node.visible) continue;
@@ -386,27 +466,138 @@ bool canvas(Scene& s, View& view)
         if (int(i) == s.selected) {
             d->AddRect({o.x + p.bounds.minimum.x * z, o.y + p.bounds.minimum.y * z},
                        {o.x + p.bounds.maximum.x * z, o.y + p.bounds.maximum.y * z}, IM_COL32(132, 204, 22, 255));
-            const Vec2 pivot = transformPoint(makeAffine(node.transform), node.transform.pivot);
+            const Vec2 pivot = transformPoint(worlds[i], node.transform.pivot);
             d->AddCircle({o.x + pivot.x * z, o.y + pivot.y * z}, 3.0f, IM_COL32(255, 200, 60, 255));
-            if (view.show_vertices && node.kind == Kind::Polygon) {
-                RoundedPolygonSample handles;
-                if (sampleRoundedPolygon(node.polygon, worlds[i], handles, node.style))
-                    for (const Vec2& point : handles.landmarks)
-                        d->AddCircle({o.x + point.x * z, o.y + point.y * z}, 2.5f, IM_COL32(120, 200, 255, 255));
+            if (node.kind == Kind::Polygon && view.show_vertices) {
+                RoundedPolygonSample landmarks;
+                if (sampleRoundedPolygon(node.polygon, worlds[i], landmarks, node.style))
+                    for (uint8_t v = 0; v < landmarks.parameters.vertex_count; ++v)
+                        d->AddCircle({o.x + landmarks.landmarks[v].x * z, o.y + landmarks.landmarks[v].y * z}, 2.5f,
+                                     IM_COL32(120, 200, 255, 255));
             }
         }
     }
-    if (hierarchy_valid && ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        const ImVec2 mouse = ImGui::GetIO().MousePos;
-        const Vec2 point{(mouse.x - o.x) / z, (mouse.y - o.y) / z};
-        for (int index = int(display.count) - 1; index >= 0; --index) {
-            ShapePath path;
-            if (display.nodes[index].visible && sample(display.nodes[index], worlds[index], path) &&
-                path.bounds.valid && point.x >= path.bounds.minimum.x && point.x <= path.bounds.maximum.x &&
-                point.y >= path.bounds.minimum.y && point.y <= path.bounds.maximum.y) {
-                s.selected = index;
-                break;
+    if (handle_edit_ready && canvas_handle_count > 0) {
+        const ImU32 line_colour   = IM_COL32(255, 140, 210, 170);
+        const ImU32 handle_colour = IM_COL32(255, 140, 210, 255);
+        const ImU32 hover_colour  = IM_COL32(255, 224, 96, 255);
+        const ImU32 active_colour = IM_COL32(255, 255, 255, 255);
+        for (size_t h = 0; h < canvas_handle_count; ++h) {
+            const CanvasHandle& handle = canvas_handles[h];
+            const bool active          = view.drag_handle_node == s.selected && view.drag_handle_kind == handle.kind &&
+                                         view.drag_handle_index == handle.index;
+            const bool hovered         = !active && hovered_handle == static_cast<int>(h);
+            const ImU32 colour         = active ? active_colour : (hovered ? hover_colour : handle_colour);
+            const float radius         = active ? 7.0f : (hovered ? 6.0f : 4.5f);
+            d->AddLine(handle.anchor, handle.point, active ? active_colour : line_colour);
+            d->AddCircleFilled(handle.point, radius, colour);
+            if (active || hovered) d->AddCircle(handle.point, radius + 2.0f, colour);
+        }
+    }
+    // --- Control-handle drag ------------------------------------------------------
+    // Runs regardless of window hover so releasing outside the viewport ends cleanly.
+    if (handle_edit_ready && view.drag_handle_node >= 0 && view.drag_handle_node < static_cast<int>(s.count)) {
+        if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            const ImVec2 mouse = ImGui::GetIO().MousePos;
+            const Vec2 world{(mouse.x - o.x) / z, (mouse.y - o.y) / z};
+            const Vec2 local           = transformPoint(handle_world_inverse, world);
+            Node& node                 = s.nodes[view.drag_handle_node];
+            const uint8_t vertex_count = handle_sample.parameters.vertex_count;
+            if (view.drag_handle_index >= 0 && view.drag_handle_index < vertex_count) {
+                if (view.drag_handle_kind <= 1) {
+                    // Edge handle: invert the bulge/start/end mapping.
+                    const auto& edge     = handle_sample.edges[view.drag_handle_index];
+                    const Vec2 edge_vec  = vsub(edge.end, edge.start);
+                    const float edge_len = vlen(edge_vec);
+                    if (edge_len > 1e-4f) {
+                        const Vec2 dir = vnorm(edge_vec);
+                        const Vec2 outward{dir.y, -dir.x};
+                        if (view.drag_handle_kind == 0) {
+                            const Vec2 offset  = vsub(local, edge.start);
+                            const float along  = vdot(offset, dir);
+                            const float across = vdot(offset, outward);
+                            if (std::fabs(along) > 1e-4f) {
+                                node.polygon.edges[view.drag_handle_index].bulge =
+                                    std::clamp(across / along, -0.35f, 0.35f);
+                                node.polygon.edges[view.drag_handle_index].start =
+                                    std::clamp(vlen(offset) / edge_len, 0.08f, 0.45f);
+                                changed = true;
+                            }
+                        } else {
+                            const Vec2 offset  = vsub(edge.end, local);
+                            const float along  = vdot(offset, dir);
+                            const float across = vdot(offset, outward);
+                            if (std::fabs(along) > 1e-4f) {
+                                node.polygon.edges[view.drag_handle_index].bulge =
+                                    std::clamp(-across / along, -0.35f, 0.35f);
+                                node.polygon.edges[view.drag_handle_index].end =
+                                    std::clamp(vlen(offset) / edge_len, 0.08f, 0.45f);
+                                changed = true;
+                            }
+                        }
+                    }
+                } else {
+                    // Corner handle: invert the cap-tension mapping; roundness is kept.
+                    const auto& corner          = handle_sample.corners[view.drag_handle_index];
+                    const Vec2 vertex           = handle_sample.parameters.vertices[view.drag_handle_index];
+                    const float corner_distance = vlen(vsub(corner.start, vertex));
+                    if (corner_distance > 1e-4f) {
+                        const Vec2 offset =
+                            view.drag_handle_kind == 2 ? vsub(local, corner.start) : vsub(corner.end, local);
+                        node.polygon.corners[view.drag_handle_index].cap_tension =
+                            std::clamp(vlen(offset) / corner_distance, 0.10f, 0.90f);
+                        changed = true;
+                    }
+                }
             }
+        }
+        if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            view.drag_handle_node  = -1;
+            view.drag_handle_kind  = -1;
+            view.drag_handle_index = -1;
+        }
+    }
+
+    if (hierarchy_valid && ImGui::IsWindowHovered()) {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            const ImVec2 mouse  = ImGui::GetIO().MousePos;
+            bool started_handle = false;
+            if (handle_edit_ready && hovered_handle >= 0 && hovered_handle < static_cast<int>(canvas_handle_count)) {
+                const CanvasHandle& handle = canvas_handles[hovered_handle];
+                view.drag_handle_node      = s.selected;
+                view.drag_handle_kind      = handle.kind;
+                view.drag_handle_index     = handle.index;
+                view.drag_node             = -1;
+                started_handle             = true;
+            }
+            if (!started_handle) {
+                const Vec2 point{(mouse.x - o.x) / z, (mouse.y - o.y) / z};
+                bool hit = false;
+                for (int index = int(display.count) - 1; index >= 0; --index) {
+                    ShapePath path;
+                    if (display.nodes[index].visible && sample(display.nodes[index], worlds[index], path) &&
+                        path.bounds.valid && point.x >= path.bounds.minimum.x && point.x <= path.bounds.maximum.x &&
+                        point.y >= path.bounds.minimum.y && point.y <= path.bounds.maximum.y) {
+                        s.selected     = index;
+                        view.drag_node = index;
+                        hit            = true;
+                        break;
+                    }
+                }
+                if (!hit) view.drag_node = -1;
+            }
+        }
+        if (view.drag_handle_node < 0 && view.drag_node >= 0 && view.drag_node < static_cast<int>(s.count)) {
+            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                const ImVec2 delta = ImGui::GetIO().MouseDelta;
+                if (delta.x != 0.0f || delta.y != 0.0f) {
+                    Node& node = s.nodes[view.drag_node];
+                    node.transform.translation.x += delta.x / z;
+                    node.transform.translation.y += delta.y / z;
+                    changed = true;
+                }
+            }
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) view.drag_node = -1;
         }
     }
     char zoom_label[32];
@@ -1366,6 +1557,8 @@ void toolbar(Scene& s, View& view, History& history, Pending& pending, bool& val
     ImGui::Checkbox("Guides", &view.show_guides);
     ImGui::SameLine();
     ImGui::Checkbox("Vertices", &view.show_vertices);
+    ImGui::SameLine();
+    ImGui::Checkbox("Bezier controls", &view.show_bezier_controls);
 }
 
 bool scenePanel(Scene& s)

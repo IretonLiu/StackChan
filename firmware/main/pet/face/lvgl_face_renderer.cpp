@@ -34,7 +34,8 @@ void configure(lv_draw_vector_dsc_t* descriptor, const PathStyle& style)
     lv_draw_vector_dsc_set_stroke_opa(descriptor,
                                       style.stroke ? toOpacity(style.opacity) : static_cast<lv_opa_t>(LV_OPA_TRANSP));
     if (style.fill) {
-        lv_draw_vector_dsc_set_fill_color(descriptor, lv_color_make(style.color.red, style.color.green, style.color.blue));
+        lv_draw_vector_dsc_set_fill_color(descriptor,
+                                          lv_color_make(style.color.red, style.color.green, style.color.blue));
     }
     if (style.stroke) {
         lv_draw_vector_dsc_set_stroke_color(descriptor,
@@ -60,13 +61,13 @@ bool bounds(const FaceDrawing& drawing, lv_area_t& area)
 
     for (uint8_t path_index = 0; path_index < drawing.path_count; ++path_index) {
         const FacePath& path = drawing.paths[path_index];
-        margin = std::max(margin, (path.style.stroke ? path.style.stroke_width * 0.5f : 0.0f) + 2.0f);
+        margin               = std::max(margin, (path.style.stroke ? path.style.stroke_width * 0.5f : 0.0f) + 2.0f);
         for (uint8_t index = 0; index < path.command_count; ++index) {
             const PathCommand& command = path.commands[index];
             // Only the control points that belong to this command define the
             // hull; unused fields are zero-initialised.
             const Vec2 points[3] = {command.first, command.second, command.end};
-            const uint8_t count    = command.type == PathCommandType::Cubic ? 3 : 1;
+            const uint8_t count  = command.type == PathCommandType::Cubic ? 3 : 1;
             for (uint8_t point_index = 0; point_index < count; ++point_index) {
                 const Vec2& value = points[point_index];
                 if (!any_point) {
@@ -161,8 +162,17 @@ void LvglFaceRenderer::render(const FaceDrawing& drawing)
     // Repainting only the ink region keeps the PSRAM write traffic low enough
     // for 30 fps; a full 320 x 240 canvas clear alone costs about 20 ms.
     lv_area_t dirty{};
-    bool has_dirty = false;
-    if (has_ink) {
+    bool has_dirty                = false;
+    const bool background_changed = drawing.background.red != drawing_background_.red ||
+                                    drawing.background.green != drawing_background_.green ||
+                                    drawing.background.blue != drawing_background_.blue;
+    if (background_changed) {
+        // The persistent canvas was initially cleared with its default colour.
+        // A new preset background therefore has to repaint every device pixel,
+        // not only the current face ink region.
+        dirty     = {0, 0, kCanvasWidth - 1, kCanvasHeight - 1};
+        has_dirty = true;
+    } else if (has_ink) {
         dirty     = ink_area;
         has_dirty = true;
         if (previous_ink_valid_) {
@@ -195,8 +205,8 @@ void LvglFaceRenderer::render(const FaceDrawing& drawing)
 
 void LvglFaceRenderer::clearArea(const lv_area_t& area, Color color)
 {
-    const uint32_t pixel = (0xFFu << 24) | (static_cast<uint32_t>(color.red) << 16) |
-                           (static_cast<uint32_t>(color.green) << 8) | static_cast<uint32_t>(color.blue);
+    const uint32_t pixel  = (0xFFu << 24) | (static_cast<uint32_t>(color.red) << 16) |
+                            (static_cast<uint32_t>(color.green) << 8) | static_cast<uint32_t>(color.blue);
     const uint32_t stride = draw_buffer_->header.stride / 4;
     auto* pixels          = reinterpret_cast<uint32_t*>(draw_buffer_->data);
 
@@ -210,8 +220,8 @@ void LvglFaceRenderer::drawInk(const FaceDrawing& drawing, const lv_area_t& area
 {
     lv_layer_t layer;
     lv_canvas_init_layer(canvas_, &layer);
-    layer._clip_area      = area;
-    layer.phy_clip_area   = area;
+    layer._clip_area    = area;
+    layer.phy_clip_area = area;
 
     lv_draw_vector_dsc_t* descriptor = lv_draw_vector_dsc_create(&layer);
     for (uint8_t index = 0; index < drawing.path_count; ++index) {
@@ -242,9 +252,9 @@ void LvglFaceRenderer::submitPath(lv_draw_vector_dsc_t* descriptor, const FacePa
                 break;
             }
             case PathCommandType::Cubic: {
-                const lv_fpoint_t first = point(command.first);
+                const lv_fpoint_t first  = point(command.first);
                 const lv_fpoint_t second = point(command.second);
-                const lv_fpoint_t end = point(command.end);
+                const lv_fpoint_t end    = point(command.end);
                 lv_vector_path_cubic_to(vector_path, &first, &second, &end);
                 break;
             }
