@@ -60,7 +60,7 @@ Available static review poses are `neutral`, `perked`, `twitch`, and `droop`.
 Run `shape_preview --help` for the bounded parameter overrides.
 
 For rapid interactive editing on a desktop, initialise the pinned Dear ImGui
-submodule and build the optional GLFW studio (it is never included in the
+submodule and build Kiwi Studio, the optional GLFW editor (it is never included in the
 ESP-IDF image):
 
 ```bash
@@ -81,7 +81,7 @@ On-device consumers append a sampled `ShapePath` with
 style in the exact `FaceDrawing` model consumed by `LvglFaceRenderer`.
 Non-finite shape inputs are rejected rather than converted into geometry.
 
-For Pet Base, run the complete suite after exporting ESP-IDF. It runs those
+For Project Kiwi, run the complete suite after exporting ESP-IDF. It runs those
 host tests, builds the isolated image, then verifies its build configuration
 and compiled-source boundary:
 
@@ -95,9 +95,9 @@ and compiled-source boundary:
 idf.py flash
 ```
 
-## Custom Pet Base image
+## Project Kiwi firmware image
 
-The custom pet work uses its own build directory and generated `sdkconfig`.
+Project Kiwi uses its own build directory and generated `sdkconfig`.
 It boots only `AppPetBase`: no launcher and no XiaoZhi assistant loop.
 
 ```bash
@@ -108,12 +108,12 @@ It boots only `AppPetBase`: no launcher and no XiaoZhi assistant loop.
 This is deliberately transitional. Pet code reaches hardware only through
 `hal/pet/pet_hardware.*`; the inherited XiaoZhi board component remains behind
 that gateway. `CONFIG_STACKCHAN_ENABLE_XIAOZHI_RUNTIME` preserves the optional
-XiaoZhi feature set in the checkout, but Pet Base sets it to `n`, excluding its
+XiaoZhi feature set in the checkout, but Project Kiwi sets it to `n`, excluding its
 apps, services, audio processing, remote networking, and assistant assets.
 The retained display/camera/audio board compatibility is progressively being
 moved behind the custom `hal/` boundary.
 
 Measured memory, display and frame-time budgets for this image live in
-[docs/pet-base-budgets.md](docs/pet-base-budgets.md). Read it before adding
+[docs/pet-base-budgets.md](docs/pet-base-budgets.md) (legacy filename retained for compatibility). Read it before adding
 renderers, buffers or tasks: the panel is bandwidth-bound at ~32 fps for a full
 frame, and the vector rasterizer needs ~21 KiB of stack.

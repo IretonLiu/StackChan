@@ -9,7 +9,7 @@
 
 namespace pet::preset {
 
-/** Returns the compiled preset selected as the Pet Base idle display. */
+/** Returns the compiled preset selected as the Project Kiwi idle display. */
 const FacePresetDefinition* defaultFacePreset();
 
 /** Returns nullptr for an unknown host-compiled preset id. */

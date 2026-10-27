@@ -13,24 +13,24 @@
 using namespace smooth_ui_toolkit::lvgl_cpp;
 
 namespace {
-constexpr std::string_view kTag = "PetBase";
+constexpr std::string_view kTag = "ProjectKiwi";
 constexpr uint32_t kStackChanUpdateIntervalMs = 20;
 constexpr uint32_t kPetBlue = 0x12304A;
 }  // namespace
 
 AppPetBase::AppPetBase()
 {
-    setAppInfo().name = "Pet Base";
+    setAppInfo().name = "Project Kiwi";
 }
 
 void AppPetBase::onCreate()
 {
-    mclog::tagInfo(kTag, "create custom pet base app");
+    mclog::tagInfo(kTag, "create Project Kiwi app");
 }
 
 void AppPetBase::onOpen()
 {
-    mclog::tagInfo(kTag, "open custom pet base app");
+    mclog::tagInfo(kTag, "open Project Kiwi app");
 
     PetHardware::DisplayLock lock;
 
@@ -73,7 +73,7 @@ void AppPetBase::onRunning()
 
 void AppPetBase::onClose()
 {
-    mclog::tagInfo(kTag, "close custom pet base app");
+    mclog::tagInfo(kTag, "close Project Kiwi app");
 
     PetHardware::DisplayLock lock;
     _face_renderer.reset();

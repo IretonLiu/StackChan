@@ -310,7 +310,7 @@ int main()
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    GLFWwindow* window = glfwCreateWindow(1160, 760, "StackChan Shape Studio", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1160, 760, "Kiwi Studio", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return 1;
@@ -343,7 +343,7 @@ int main()
         ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
         constexpr ImGuiWindowFlags kWindowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
                                                    ImGuiWindowFlags_NoSavedSettings;
-        ImGui::Begin("Shape Studio", nullptr, kWindowFlags);
+        ImGui::Begin("Kiwi Studio", nullptr, kWindowFlags);
         ImGui::Columns(2, "studio-columns", true);
         ImGui::SetColumnWidth(0, 760.0f);
         drawCanvas(sample, state, world);

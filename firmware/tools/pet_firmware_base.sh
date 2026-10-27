@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build or flash the isolated custom Pet Base configuration.
+# Build or flash Project Kiwi's isolated compatibility configuration.
 #
 # Examples:
 #   ./tools/pet_firmware_base.sh build
