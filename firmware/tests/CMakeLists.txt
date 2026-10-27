@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.16)
 project(stackchan_firmware_tests LANGUAGES CXX)
 
 enable_testing()
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+add_test(NAME face_preset_compiler_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/face_preset_compiler_test.py)
 
 add_executable(motion_math_test
     motion_math_test.cpp

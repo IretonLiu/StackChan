@@ -442,6 +442,23 @@ idf_component_register(SRCS ${SOURCES}
                     PRIV_REQUIRES ${STACKCHAN_PRIV_REQUIRES}
                     )
 
+# Compile face-scene source on the host. Firmware consumes the resulting typed
+# registry only; it never links a JSON parser or reads editable preset files.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+file(GLOB PET_FACE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/*.petface.json")
+set(PET_FACE_GENERATED_HEADER "${CMAKE_CURRENT_BINARY_DIR}/pet_generated/face_presets.generated.h")
+add_custom_command(
+    OUTPUT "${PET_FACE_GENERATED_HEADER}"
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compile_face_presets.py"
+            ${PET_FACE_SOURCES} --output "${PET_FACE_GENERATED_HEADER}"
+    DEPENDS ${PET_FACE_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compile_face_presets.py"
+    COMMENT "Compiling Pet Base face presets"
+    VERBATIM
+)
+add_custom_target(pet_face_presets ALL DEPENDS "${PET_FACE_GENERATED_HEADER}")
+add_dependencies(${COMPONENT_LIB} pet_face_presets)
+target_include_directories(${COMPONENT_LIB} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+
 # esp-now exports global log wrappers. Pet Base does not compile or initialize
 # ESP-NOW, so bind those wrapper symbols to ESP-IDF's regular logger rather
 # than pulling the unused wrapper implementation into the minimal image.

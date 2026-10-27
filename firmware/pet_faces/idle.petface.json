@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "id": "idle-cat",
+  "background": [7, 16, 24],
+  "nodes": [
+    {
+      "id": "left-ear",
+      "kind": "rounded_polygon",
+      "style": { "color": [248, 245, 237] },
+      "rounded_polygon": {
+        "vertices": [[72, 102], [108, 42], [142, 102]],
+        "corners": [
+          { "roundness": 0.07, "cap_tension": 0.55 },
+          { "roundness": 0.12, "cap_tension": 0.55 },
+          { "roundness": 0.07, "cap_tension": 0.55 }
+        ],
+        "edges": [{}, {}, {}]
+      }
+    },
+    {
+      "id": "right-ear",
+      "kind": "rounded_polygon",
+      "style": { "color": [248, 245, 237] },
+      "rounded_polygon": {
+        "vertices": [[178, 102], [212, 42], [248, 102]],
+        "corners": [
+          { "roundness": 0.07, "cap_tension": 0.55 },
+          { "roundness": 0.12, "cap_tension": 0.55 },
+          { "roundness": 0.07, "cap_tension": 0.55 }
+        ],
+        "edges": [{}, {}, {}]
+      }
+    },
+    {
+      "id": "left-eye",
+      "kind": "circle",
+      "style": { "color": [248, 245, 237] },
+      "circle": { "center": [118, 138], "radius": 12 }
+    },
+    {
+      "id": "right-eye",
+      "kind": "circle",
+      "style": { "color": [248, 245, 237] },
+      "circle": { "center": [202, 138], "radius": 12 }
+    }
+  ]
+}
