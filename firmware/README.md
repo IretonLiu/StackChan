@@ -65,16 +65,30 @@ ESP-IDF image):
 
 ```bash
 git submodule update --init --recursive
-cmake -S tests -B build-shape-studio -DSTACKCHAN_BUILD_SHAPE_STUDIO=ON
-cmake --build build-shape-studio --target shape_studio
-./build-shape-studio/shape_studio
+cmake -S tests -B build-kiwi-studio -DSTACKCHAN_BUILD_KIWI_STUDIO=ON
+cmake --build build-kiwi-studio --target kiwi_studio
+./build-kiwi-studio/kiwi_studio
 ```
 
-The studio exposes the same bounded template and affine-transform parameters,
-provides landmark/pivot/control-polygon overlays, static presets, and exports
-`shape-studio-ear.svg` from the current geometry. It visualises the fixed
-six-cubic topology: three corner patches own the tangent rails, while each
-adjoining edge handle is derived from its corner tangent and a bounded tension.
+Kiwi Studio is a host-only face-scene composer. It edits ordered circle and
+rounded-polygon nodes, their bounded style/transform controls, and the scene
+background, and parent-linked transforms. Its framed viewport is the physical
+StackChan LCD coordinate space, exactly `320 x 240` design pixels. It saves
+`kiwi-face.petface.json`, exports a matching `kiwi-face.svg`, and can invoke
+the preset compiler to validate its saved scene. Run it from `firmware/` so
+the validation action can find `tools/compile_face_presets.py`. Copy a
+validated JSON scene into `pet_faces/` to compile it into Project Kiwi. The
+legacy `shape_studio` build target remains an alias for `kiwi_studio`.
+
+Headless checks run from `firmware/` without opening a window:
+
+```bash
+./build-kiwi-studio/kiwi_studio --validate pet_faces/idle.petface.json
+./build-kiwi-studio/kiwi_studio --roundtrip pet_faces/idle.petface.json /tmp/idle-roundtrip.petface.json
+```
+
+`--validate` reports strict load errors and exits non-zero when the scene is rejected.
+`--roundtrip` additionally saves the loaded scene and runs the preset compiler on the result.
 
 On-device consumers append a sampled `ShapePath` with
 `pet::shape::appendToFaceDrawing`; the adapter preserves its commands and

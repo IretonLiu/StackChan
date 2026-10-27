@@ -13,9 +13,9 @@
 using namespace smooth_ui_toolkit::lvgl_cpp;
 
 namespace {
-constexpr std::string_view kTag = "ProjectKiwi";
+constexpr std::string_view kTag               = "ProjectKiwi";
 constexpr uint32_t kStackChanUpdateIntervalMs = 20;
-constexpr uint32_t kPetBlue = 0x12304A;
+constexpr uint32_t kPetBlue                   = 0x12304A;
 }  // namespace
 
 AppPetBase::AppPetBase()
@@ -41,9 +41,10 @@ void AppPetBase::onOpen()
     _panel->setBorderWidth(0);
     _panel->setPaddingAll(0);
 
-    _face_renderer = std::make_unique<pet::face::LvglFaceRenderer>(_panel->get());
+    _face_renderer                                  = std::make_unique<pet::face::LvglFaceRenderer>(_panel->get());
     const pet::preset::FacePresetDefinition* preset = pet::preset::defaultFacePreset();
-    if (preset == nullptr || !pet::preset::buildFaceDrawing(*preset, _preset_drawing)) {
+    if (preset == nullptr || !pet::preset::evaluateFacePreset(*preset, 0, _preset_evaluation) ||
+        !pet::preset::buildFaceDrawing(_preset_evaluation, _preset_drawing)) {
         mclog::tagError(kTag, "compiled default face preset is invalid");
         return;
     }

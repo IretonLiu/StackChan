@@ -5,6 +5,7 @@
 
 #include <mooncake.h>
 #include <pet/face/lvgl_face_renderer.h>
+#include <pet/preset/face_preset_evaluator.h>
 #include <pet/face/glyph_paths.h>
 #include <smooth_lvgl.hpp>
 #include <uitk/short_namespace.hpp>
@@ -29,6 +30,7 @@ public:
 private:
     std::unique_ptr<uitk::lvgl_cpp::Container> _panel;
     std::unique_ptr<pet::face::LvglFaceRenderer> _face_renderer;
+    pet::preset::FacePresetEvaluation _preset_evaluation{};
     pet::face::FaceDrawing _preset_drawing{};
     uint32_t _last_stackchan_update_ms = 0;
 };

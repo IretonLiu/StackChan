@@ -49,12 +49,26 @@ target_compile_features(face_expression_test PRIVATE cxx_std_17)
 
 add_test(NAME face_expression_test COMMAND $<TARGET_FILE:face_expression_test>)
 
+add_executable(face_motion_test
+    face_motion_test.cpp
+    ../main/pet/preset/face_motion.cpp
+)
+
+target_include_directories(face_motion_test PRIVATE
+    ../main
+)
+
+target_compile_features(face_motion_test PRIVATE cxx_std_17)
+
+add_test(NAME face_motion_test COMMAND $<TARGET_FILE:face_motion_test>)
+
 add_executable(shape_core_test
     shape_core_test.cpp
     ../main/pet/shape/circle.cpp
     ../main/pet/shape/rounded_polygon.cpp
     ../main/pet/shape/shape_path.cpp
     ../main/pet/shape/shape_face_adapter.cpp
+    ../main/pet/preset/face_preset_evaluator.cpp
     ../main/pet/preset/face_preset_renderer.cpp
     ../main/pet/shape/soft_polygon.cpp
 )
@@ -93,9 +107,11 @@ target_include_directories(shape_preview PRIVATE
 
 target_compile_features(shape_preview PRIVATE cxx_std_17)
 
-option(STACKCHAN_BUILD_SHAPE_STUDIO "Build the GLFW/Dear ImGui shape editor" OFF)
+option(STACKCHAN_BUILD_KIWI_STUDIO "Build Kiwi Studio, the GLFW/Dear ImGui Project Kiwi editor" OFF)
+# Temporary compatibility switch for existing local build commands.
+option(STACKCHAN_BUILD_SHAPE_STUDIO "Deprecated alias for STACKCHAN_BUILD_KIWI_STUDIO" OFF)
 
-if(STACKCHAN_BUILD_SHAPE_STUDIO)
+if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
     set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tools/vendor/imgui")
     if(NOT EXISTS "${IMGUI_DIR}/imgui.cpp")
         message(FATAL_ERROR "Shape Studio needs the imgui submodule. Run: git submodule update --init --recursive")
@@ -104,8 +120,10 @@ if(STACKCHAN_BUILD_SHAPE_STUDIO)
     find_package(glfw3 3.3 REQUIRED)
     find_package(OpenGL REQUIRED)
 
-    add_executable(shape_studio
-        shape_studio.cpp
+    add_executable(kiwi_studio
+        kiwi_studio.cpp
+        ../main/pet/preset/face_motion.cpp
+        ../main/pet/shape/circle.cpp
         ../main/pet/shape/shape_path.cpp
         ../main/pet/shape/rounded_polygon.cpp
         ../main/pet/shape/soft_polygon.cpp
@@ -117,12 +135,33 @@ if(STACKCHAN_BUILD_SHAPE_STUDIO)
         ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
     )
 
-    target_include_directories(shape_studio PRIVATE
+    target_include_directories(kiwi_studio PRIVATE
         ../main
+        ../components/ArduinoJson/src
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
     )
 
-    target_compile_features(shape_studio PRIVATE cxx_std_17)
-    target_link_libraries(shape_studio PRIVATE glfw OpenGL::GL)
+    target_compile_features(kiwi_studio PRIVATE cxx_std_17)
+    target_link_libraries(kiwi_studio PRIVATE glfw OpenGL::GL)
+    add_custom_target(shape_studio DEPENDS kiwi_studio)
+
+    add_test(NAME kiwi_studio_roundtrip_idle
+        COMMAND $<TARGET_FILE:kiwi_studio> --roundtrip
+                ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/idle.petface.json
+                ${CMAKE_CURRENT_BINARY_DIR}/kiwi-idle-roundtrip.petface.json
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+    add_test(NAME kiwi_studio_reject_unknown_field
+        COMMAND $<TARGET_FILE:kiwi_studio> --validate
+                ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/invalid.petface.json
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+    set_tests_properties(kiwi_studio_reject_unknown_field PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME kiwi_studio_reject_empty_nodes
+        COMMAND $<TARGET_FILE:kiwi_studio> --validate
+                ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/empty.petface.json
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+    set_tests_properties(kiwi_studio_reject_empty_nodes PROPERTIES WILL_FAIL TRUE)
 endif()

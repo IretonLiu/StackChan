@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="960" viewBox="0 0 720 960">
+  <title>StackChan kaomoji expression study</title>
+  <rect width="720" height="960" fill="#000000"/>
+  <style>
+    .line { fill: none; stroke: #f8f5ed; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #f8f5ed; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+    .fill { fill: #f8f5ed; }
+  </style>
+
+  <!-- Content, bashful, and crying -->
+  <g transform="translate(120 82)">
+    <path class="line" d="M-55 0H-18 M18 0H55"/>
+    <path class="line" d="M-18 15 Q-9 31 0 19 Q9 31 18 15"/>
+  </g>
+  <g transform="translate(360 82)">
+    <path class="line" d="M-60 0H-24 M24 0H60"/>
+    <path class="line" d="M-7 4 Q15 7 7 22 Q-4 30-11 22 Q-1 17 6 24"/>
+  </g>
+  <g transform="translate(600 82)">
+    <path class="line" d="M-60 0H-24 M24 0H60"/>
+    <path class="line" d="M-18 24 Q0 2 18 24Z"/>
+    <path class="line" d="M-51 38 Q-65 62-51 70 Q-37 62-51 38 M51 38 Q37 62 51 70 Q65 62 51 38"/>
+  </g>
+
+  <!-- Blank, tongue-out, moustache -->
+  <g transform="translate(120 194)">
+    <circle class="fill" cx="-42" cy="0" r="17"/><circle class="fill" cx="42" cy="0" r="17"/>
+    <path class="line" d="M-18 0H18"/>
+  </g>
+  <g transform="translate(360 194)">
+    <path class="line" d="M-58 0 Q-43-20-28 0 M28 0 Q43-20 58 0"/>
+    <path class="line" d="M-11 9 Q-6 25 0 9 Q6 25 11 9 M-5 17 V36 Q0 46 5 36 V17"/>
+  </g>
+  <g transform="translate(600 194)">
+    <path class="line" d="M-58-8 Q-38 27-18-8 M18-8 Q38 27 58-8"/>
+    <path class="line" d="M-20 18 Q-10 36 0 22 Q10 36 20 18"/>
+  </g>
+
+  <!-- Fierce, annoyed, glasses -->
+  <g transform="translate(120 306)">
+    <path class="fill" d="M-58-20 L-14 13 Q-48 31-62 3Z M58-20 L14 13 Q48 31 62 3Z"/>
+    <path class="line" d="M-18 22 Q-9 35 0 25 Q9 35 18 22"/>
+  </g>
+  <g transform="translate(360 306)">
+    <path class="fill" d="M-58-20 L-14 13 Q-48 31-62 3Z M58-20 L14 13 Q48 31 62 3Z"/>
+    <path class="line" d="M-8 5 Q16 8 8 22 Q-3 29-10 21"/>
+  </g>
+  <g transform="translate(600 306)">
+    <path class="line" d="M-62-8 H-15 L-23 16 H-52Z M62-8 H15 L23 16 H52Z"/>
+    <path class="line" d="M-18 26 Q-8 42 0 30 Q8 42 18 26"/>
+  </g>
+
+  <!-- Soft surprise, confused, tearful -->
+  <g transform="translate(120 418)">
+    <circle class="line" cx="-42" cy="0" r="18"/><circle class="line" cx="42" cy="0" r="18"/>
+    <path class="line" d="M-17 20 Q-8 33 0 23 Q8 33 17 20"/>
+  </g>
+  <g transform="translate(360 418)">
+    <circle class="line" cx="-42" cy="0" r="18"/><circle class="line" cx="42" cy="0" r="18"/>
+    <path class="line" d="M-8 5 Q15 8 7 23 Q-4 30-10 22"/>
+  </g>
+  <g transform="translate(600 418)">
+    <circle class="line" cx="-42" cy="0" r="18"/><circle class="line" cx="42" cy="0" r="18"/>
+    <path class="line" d="M-18 24 Q0 3 18 24Z"/>
+    <path class="line" d="M-51 35 Q-64 57-51 67 Q-38 57-51 35 M51 35 Q38 57 51 67 Q64 57 51 35"/>
+  </g>
+
+  <!-- Tiny happy, grumpy, irritated -->
+  <g transform="translate(120 530)">
+    <circle class="line" cx="-44" cy="0" r="8"/><circle class="line" cx="44" cy="0" r="8"/>
+    <path class="line" d="M-12 8 V21 Q0 33 12 21 V8 M-12 8 Q0 19 12 8"/>
+  </g>
+  <g transform="translate(360 530)">
+    <path class="line" d="M-55-18 Q-42-28-30-16 M55-18 Q42-28 30-16"/>
+    <path class="line" d="M-45 0 Q-35 13-24 2 M45 0 Q35 13 24 2"/>
+    <path class="line" d="M-15 27 Q0 10 15 27"/>
+  </g>
+  <g transform="translate(600 530)">
+    <path class="line" d="M-62-12 H-25 M25-12 H62"/>
+    <path class="line" d="M-56 0 H-30 M56 0 H30"/>
+    <path class="line" d="M-18 18 H18"/>
+    <path class="line" d="M70-24 L82-34 M78-12 L92-12 M72 0 L82 11"/>
+  </g>
+
+  <!-- Squeezed, dizzy, smug -->
+  <g transform="translate(120 642)">
+    <path class="line" d="M-58-10 L-31 0 L-58 10 M58-10 L31 0 L58 10"/>
+    <path class="line" d="M-14 4 L-5 12 L0 5 L5 12 L14 4"/>
+  </g>
+  <g transform="translate(360 642)">
+    <path class="line" d="M-52-8 Q-35-26-22-7 Q-35 8-52-8 M52-8 Q35-26 22-7 Q35 8 52-8"/>
+    <path class="line" d="M-20 16 L-12 25 L-4 16 L4 25 L12 16 L20 25"/>
+  </g>
+  <g transform="translate(600 642)">
+    <path class="line" d="M-60-8 H-30 M60-8 H30"/>
+    <path class="line" d="M-53 4 H-30 M53 4 H30"/>
+    <path class="line" d="M-15 17 Q0 28 15 17"/>
+  </g>
+
+  <!-- Relieved, drooling, delighted -->
+  <g transform="translate(120 754)">
+    <path class="line" d="M-56-6 Q-41-24-27-6 M56-6 Q41-24 27-6"/>
+    <path class="line" d="M-23 12 Q0 43 23 12"/>
+  </g>
+  <g transform="translate(360 754)">
+    <path class="line" d="M-59-13 H-25 V9 M59-13 H25 V9"/>
+    <path class="line" d="M-20 8 H20 Q20 25 5 25 V38 Q0 48-5 38 V25 Q-20 25-20 8Z"/>
+  </g>
+  <g transform="translate(600 754)">
+    <circle class="fill" cx="-42" cy="0" r="10"/><circle class="fill" cx="42" cy="0" r="10"/>
+    <path class="line" d="M-18 10 Q0 36 18 10 Q0 21-18 10Z"/>
+  </g>
+
+  <!-- Sly, sharp, crown -->
+  <g transform="translate(120 866)">
+    <path class="line" d="M-60-11 H-20 L-28 10 H-52Z M60-11 H20 L28 10 H52Z"/>
+    <path class="line" d="M-12 25 L13 17"/>
+  </g>
+  <g transform="translate(360 866)">
+    <path class="line" d="M-58 13 L-21-19 L-11 17Z M58 13 L21-19 L11 17Z"/>
+    <path class="line" d="M-10 22 L0 3 L10 22Z"/>
+  </g>
+  <g transform="translate(600 866)">
+    <circle class="fill" cx="-42" cy="0" r="10"/><circle class="fill" cx="42" cy="0" r="10"/>
+    <path class="line" d="M-22 18 V-2 L-10 10 L0-3 L10 10 L22-2 V18Z"/>
+  </g>
+</svg>

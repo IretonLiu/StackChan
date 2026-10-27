@@ -1,6 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  */
+#include <pet/preset/face_preset_evaluator.h>
 #include <pet/preset/face_preset_renderer.h>
 #include <pet/shape/circle.h>
 #include <pet/shape/rounded_polygon.h>
@@ -28,31 +29,31 @@ bool near(float left, float right)
 void testAffinePivotAndComposition()
 {
     Transform2D parent_pose;
-    parent_pose.translation = {100.0f, 40.0f};
+    parent_pose.translation      = {100.0f, 40.0f};
     parent_pose.rotation_degrees = 90.0f;
-    const Affine2D parent = pet::shape::makeAffine(parent_pose);
+    const Affine2D parent        = pet::shape::makeAffine(parent_pose);
 
     Transform2D local_pose;
     local_pose.translation = {10.0f, 0.0f};
-    const Affine2D local = pet::shape::makeAffine(local_pose);
-    const Vec2 combined = pet::shape::transformPoint(pet::shape::compose(parent, local), {});
+    const Affine2D local   = pet::shape::makeAffine(local_pose);
+    const Vec2 combined    = pet::shape::transformPoint(pet::shape::compose(parent, local), {});
     assert(near(combined.x, 100.0f));
     assert(near(combined.y, 50.0f));
 
     Transform2D pivot_pose;
-    pivot_pose.translation = {20.0f, 30.0f};
-    pivot_pose.scale = {7.0f, 9.0f};
+    pivot_pose.translation      = {20.0f, 30.0f};
+    pivot_pose.scale            = {7.0f, 9.0f};
     pivot_pose.rotation_degrees = 33.0f;
-    pivot_pose.pivot = {0.25f, -0.5f};
-    const Vec2 pivot = pet::shape::transformPoint(pet::shape::makeAffine(pivot_pose), pivot_pose.pivot);
+    pivot_pose.pivot            = {0.25f, -0.5f};
+    const Vec2 pivot            = pet::shape::transformPoint(pet::shape::makeAffine(pivot_pose), pivot_pose.pivot);
     assert(near(pivot.x, pivot_pose.translation.x));
     assert(near(pivot.y, pivot_pose.translation.y));
 
     pet::shape::Affine2D inverse;
     assert(pet::shape::invert(pet::shape::makeAffine(pivot_pose), inverse));
     const Vec2 source{0.63f, -0.27f};
-    const Vec2 round_trip = pet::shape::transformPoint(
-        inverse, pet::shape::transformPoint(pet::shape::makeAffine(pivot_pose), source));
+    const Vec2 round_trip =
+        pet::shape::transformPoint(inverse, pet::shape::transformPoint(pet::shape::makeAffine(pivot_pose), source));
     assert(near(round_trip.x, source.x));
     assert(near(round_trip.y, source.y));
 
@@ -65,7 +66,7 @@ void testEarPathAndBounds()
 {
     Transform2D transform;
     transform.translation = {160.0f, 140.0f};
-    transform.scale = {80.0f, 100.0f};
+    transform.scale       = {80.0f, 100.0f};
     pet::shape::SoftPolygonEarSample sample;
     assert(pet::shape::sampleSoftPolygonEar({}, pet::shape::makeAffine(transform), sample));
 
@@ -103,14 +104,14 @@ Vec2 subtract(Vec2 left, Vec2 right)
 void testEveryEdgeCornerJoinIsTangentAligned()
 {
     SoftPolygonEarParameters parameters;
-    parameters.left_side.bulge = 0.30f;
+    parameters.left_side.bulge  = 0.30f;
     parameters.right_side.bulge = -0.22f;
-    parameters.base.bulge = 0.12f;
+    parameters.base.bulge       = 0.12f;
     pet::shape::SoftPolygonEarSample sample;
     assert(pet::shape::sampleSoftPolygonEar(parameters, {}, sample));
     for (size_t edge_index = 0; edge_index < sample.edges.size(); ++edge_index) {
-        const size_t next_corner = (edge_index + 1) % sample.corners.size();
-        const auto& edge = sample.edges[edge_index];
+        const size_t next_corner     = (edge_index + 1) % sample.corners.size();
+        const auto& edge             = sample.edges[edge_index];
         const auto& following_corner = sample.corners[next_corner];
         const auto& preceding_corner = sample.corners[edge_index];
 
@@ -126,14 +127,14 @@ void testEveryEdgeCornerJoinIsTangentAligned()
 void testParameterClamping()
 {
     SoftPolygonEarParameters unsafe;
-    unsafe.lean = 9.0f;
-    unsafe.tip_corner.roundness = -1.0f;
+    unsafe.lean                   = 9.0f;
+    unsafe.tip_corner.roundness   = -1.0f;
     unsafe.base_corners.roundness = 3.0f;
     unsafe.tip_corner.cap_tension = 9.0f;
-    unsafe.left_side.bulge = 9.0f;
-    unsafe.left_side.start = -9.0f;
-    unsafe.left_side.end = 9.0f;
-    unsafe.tip_bend = 9.0f;
+    unsafe.left_side.bulge        = 9.0f;
+    unsafe.left_side.start        = -9.0f;
+    unsafe.left_side.end          = 9.0f;
+    unsafe.tip_bend               = 9.0f;
     pet::shape::SoftPolygonEarSample sample;
     assert(pet::shape::sampleSoftPolygonEar(unsafe, {}, sample));
     assert(sample.parameters_were_clamped);
@@ -157,7 +158,7 @@ void testNonFiniteInputsAreRejected()
     assert(sample.error == pet::shape::SoftPolygonEarSampleError::NonFiniteParameters);
     assert(sample.path.command_count == 0);
 
-    parameters = {};
+    parameters          = {};
     parameters.tip_bend = std::numeric_limits<float>::infinity();
     assert(!pet::shape::sampleSoftPolygonEar(parameters, {}, sample));
     assert(sample.error == pet::shape::SoftPolygonEarSampleError::NonFiniteParameters);
@@ -177,10 +178,10 @@ void testRoundedPolygonAndCircle()
 {
     pet::shape::RoundedPolygonParameters polygon;
     polygon.vertex_count = 5;
-    polygon.vertices = {{{0.0f, -1.0f}, {0.95f, -0.3f}, {0.59f, 0.81f}, {-0.59f, 0.81f}, {-0.95f, -0.3f}}};
+    polygon.vertices     = {{{0.0f, -1.0f}, {0.95f, -0.3f}, {0.59f, 0.81f}, {-0.59f, 0.81f}, {-0.95f, -0.3f}}};
     for (uint8_t index = 0; index < polygon.vertex_count; ++index) {
         polygon.corners[index] = {0.12f, 0.55f};
-        polygon.edges[index] = {(index % 2 == 0) ? 0.20f : -0.12f, 0.28f, 0.28f};
+        polygon.edges[index]   = {(index % 2 == 0) ? 0.20f : -0.12f, 0.28f, 0.28f};
     }
     pet::shape::RoundedPolygonSample polygon_sample;
     assert(pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
@@ -188,8 +189,8 @@ void testRoundedPolygonAndCircle()
     assert(polygon_sample.path.commands[0].type == PathCommandType::Move);
     assert(polygon_sample.path.commands[11].type == PathCommandType::Close);
     for (uint8_t index = 0; index < polygon.vertex_count; ++index) {
-        const size_t next_corner = (index + 1) % polygon.vertex_count;
-        const auto& edge = polygon_sample.edges[index];
+        const size_t next_corner     = (index + 1) % polygon.vertex_count;
+        const auto& edge             = polygon_sample.edges[index];
         const auto& following_corner = polygon_sample.corners[next_corner];
         const auto& preceding_corner = polygon_sample.corners[index];
         assert(std::abs(cross(subtract(edge.end, edge.second_control),
@@ -202,7 +203,7 @@ void testRoundedPolygonAndCircle()
     assert(!pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
     assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::InvalidVertexCount);
     polygon.vertex_count = 4;
-    polygon.vertices = {{{-1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}, {1.0f, -1.0f}}};
+    polygon.vertices     = {{{-1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}, {1.0f, -1.0f}}};
     assert(!pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
     assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::DegenerateOrNonConvex);
 
@@ -217,19 +218,61 @@ void testRoundedPolygonAndCircle()
     assert(circle.error == pet::shape::CircleSampleError::InvalidRadius);
 }
 
+void testPresetEvaluatorPreservesStaticDefinitions()
+{
+    pet::preset::FacePresetNodeDefinition nodes[2]{};
+    nodes[0].kind                  = pet::preset::ShapeKind::Circle;
+    nodes[0].transform.translation = {8.0f, 9.0f};
+    nodes[0].circle                = {{10.0f, 20.0f}, 5.0f};
+    nodes[1].kind                  = pet::preset::ShapeKind::Circle;
+    nodes[1].parent_index          = 0;
+    nodes[1].circle                = {{3.0f, 4.0f}, 2.0f};
+    const pet::preset::FacePresetDefinition preset{"test", {7, 16, 24}, nodes, 2};
+
+    pet::preset::FacePresetEvaluation evaluation;
+    pet::preset::FacePresetEvaluationError error = pet::preset::FacePresetEvaluationError::EmptyPreset;
+    assert(pet::preset::evaluateFacePreset(preset, 1234, evaluation, &error));
+    assert(error == pet::preset::FacePresetEvaluationError::None);
+    assert(evaluation.node_count == 2);
+    assert(evaluation.background.red == 7);
+    assert(near(evaluation.nodes[0].transform.translation.x, 8.0f));
+    assert(evaluation.nodes[1].parent_index == 0);
+    assert(near(evaluation.nodes[1].circle.radius, 2.0f));
+
+    const pet::preset::FacePresetEvaluation preserved = evaluation;
+    nodes[1].parent_index                             = 1;
+    assert(!pet::preset::evaluateFacePreset(preset, 0, evaluation, &error));
+    assert(error == pet::preset::FacePresetEvaluationError::InvalidParent);
+    assert(evaluation.node_count == preserved.node_count);
+    assert(near(evaluation.nodes[1].circle.radius, preserved.nodes[1].circle.radius));
+    nodes[1].parent_index      = 0;
+    nodes[0].transform.scale.x = 0.0f;
+    assert(!pet::preset::evaluateFacePreset(preset, 0, evaluation, &error));
+    assert(error == pet::preset::FacePresetEvaluationError::InvalidTransform);
+}
+
 void testCompiledPresetBuildsFaceDrawing()
 {
     pet::preset::FacePresetNodeDefinition nodes[2]{};
-    nodes[0].kind = pet::preset::ShapeKind::Circle;
-    nodes[0].circle = {{10.0f, 20.0f}, 5.0f};
-    nodes[1].kind = pet::preset::ShapeKind::RoundedPolygon;
+    nodes[0].kind                         = pet::preset::ShapeKind::Circle;
+    nodes[0].circle                       = {{10.0f, 20.0f}, 5.0f};
+    nodes[1].kind                         = pet::preset::ShapeKind::RoundedPolygon;
     nodes[1].rounded_polygon.vertex_count = 3;
-    nodes[1].rounded_polygon.vertices = {{{0.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}}};
+    nodes[1].rounded_polygon.vertices     = {{{0.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}}};
     pet::preset::FacePresetDefinition preset{"test", {7, 16, 24}, nodes, 2};
     pet::face::FaceDrawing drawing;
     assert(pet::preset::buildFaceDrawing(preset, drawing));
     assert(drawing.path_count == 2);
     assert(drawing.background.red == 7);
+
+    pet::preset::FacePresetEvaluation evaluation;
+    assert(pet::preset::evaluateFacePreset(preset, 0, evaluation));
+    pet::face::FaceDrawing evaluated_drawing;
+    assert(pet::preset::buildFaceDrawing(evaluation, evaluated_drawing));
+    assert(evaluated_drawing.path_count == drawing.path_count);
+    assert(near(evaluated_drawing.paths[0].commands[0].first.x, drawing.paths[0].commands[0].first.x));
+    assert(near(evaluated_drawing.paths[1].commands[0].first.y, drawing.paths[1].commands[0].first.y));
+
     nodes[1].parent_index = 1;
     assert(!pet::preset::buildFaceDrawing(preset, drawing));
 }
@@ -265,13 +308,13 @@ void testShapePathFlowsToFirmwareDrawing()
     assert(!pet::shape::appendToFaceDrawing(sample.path, drawing));
 
     pet::shape::ShapePath invalid_path = sample.path;
-    invalid_path.commands[0].type = static_cast<PathCommandType>(255);
+    invalid_path.commands[0].type      = static_cast<PathCommandType>(255);
     pet::face::FacePath converted;
     converted.command_count = 99;
     assert(!pet::shape::toFacePath(invalid_path, converted));
     assert(converted.command_count == 99);
 
-    invalid_path = sample.path;
+    invalid_path               = sample.path;
     invalid_path.style.opacity = std::numeric_limits<float>::quiet_NaN();
     assert(!pet::shape::toFacePath(invalid_path, converted));
 }
@@ -286,6 +329,7 @@ int main()
     testParameterClamping();
     testNonFiniteInputsAreRejected();
     testRoundedPolygonAndCircle();
+    testPresetEvaluatorPreservesStaticDefinitions();
     testCompiledPresetBuildsFaceDrawing();
     testShapePathFlowsToFirmwareDrawing();
     std::cout << "shape core tests passed\n";

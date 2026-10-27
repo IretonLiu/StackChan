@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "invalid-fixture",
+  "background": [7, 16, 24],
+  "nodes": [
+    {
+      "id": "bad-node",
+      "kind": "circle",
+      "unexpected_field": true,
+      "circle": { "center": [118, 138], "radius": 12 }
+    }
+  ]
+}
