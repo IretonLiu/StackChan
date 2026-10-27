@@ -9,6 +9,7 @@ from pathlib import Path
 
 MAX_NODES = 16
 MAX_POLYGON_VERTICES = 5
+MAX_CXX_FLOAT = 3.4028234663852886e38
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
@@ -29,7 +30,10 @@ def obj(value, where):
 def number(value, where):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
         fail(where, "must be a finite number")
-    return float(value)
+    result = float(value)
+    if abs(result) > MAX_CXX_FLOAT:
+        fail(where, "must fit a finite C++ float")
+    return result
 
 
 def point(value, where):
@@ -56,7 +60,7 @@ def require_keys(value, allowed, where):
 
 
 def parse_style(value, where):
-    value = obj(value or {}, where)
+    value = {} if value is None else obj(value, where)
     require_keys(value, {"color", "opacity", "stroke_width", "fill", "stroke"}, where)
     result = {"color": color(value.get("color", [248, 245, 237]), where + ".color"),
               "opacity": number(value.get("opacity", 1), where + ".opacity"),
@@ -70,7 +74,7 @@ def parse_style(value, where):
 
 
 def parse_transform(value, where):
-    value = obj(value or {}, where)
+    value = {} if value is None else obj(value, where)
     require_keys(value, {"translation", "rotation_degrees", "scale", "pivot"}, where)
     result = {"translation": point(value.get("translation", [0, 0]), where + ".translation"),
               "rotation": number(value.get("rotation_degrees", 0), where + ".rotation_degrees"),
@@ -188,7 +192,15 @@ def emit(scenes, output):
 def main():
     parser = argparse.ArgumentParser(); parser.add_argument("inputs", nargs="+", type=Path); parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    try: emit([parse_scene(path) for path in args.inputs], args.output)
+    try:
+        scenes, seen_ids = [], {}
+        for path in args.inputs:
+            scene = parse_scene(path)
+            if scene["id"] in seen_ids:
+                fail(f"{path}.id", f"duplicates scene id '{scene['id']}' already defined by {seen_ids[scene['id']]}")
+            seen_ids[scene["id"]] = path
+            scenes.append(scene)
+        emit(scenes, args.output)
     except SchemaError as error: print(f"preset compiler: {error}", file=sys.stderr); return 2
     return 0
 

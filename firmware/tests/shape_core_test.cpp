@@ -1,6 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  */
+#include <pet/preset/face_preset_renderer.h>
 #include <pet/shape/circle.h>
 #include <pet/shape/rounded_polygon.h>
 #include <pet/shape/shape_face_adapter.h>
@@ -216,6 +217,23 @@ void testRoundedPolygonAndCircle()
     assert(circle.error == pet::shape::CircleSampleError::InvalidRadius);
 }
 
+void testCompiledPresetBuildsFaceDrawing()
+{
+    pet::preset::FacePresetNodeDefinition nodes[2]{};
+    nodes[0].kind = pet::preset::ShapeKind::Circle;
+    nodes[0].circle = {{10.0f, 20.0f}, 5.0f};
+    nodes[1].kind = pet::preset::ShapeKind::RoundedPolygon;
+    nodes[1].rounded_polygon.vertex_count = 3;
+    nodes[1].rounded_polygon.vertices = {{{0.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}}};
+    pet::preset::FacePresetDefinition preset{"test", {7, 16, 24}, nodes, 2};
+    pet::face::FaceDrawing drawing;
+    assert(pet::preset::buildFaceDrawing(preset, drawing));
+    assert(drawing.path_count == 2);
+    assert(drawing.background.red == 7);
+    nodes[1].parent_index = 1;
+    assert(!pet::preset::buildFaceDrawing(preset, drawing));
+}
+
 void testShapePathFlowsToFirmwareDrawing()
 {
     pet::shape::SoftPolygonEarSample sample;
@@ -268,6 +286,7 @@ int main()
     testParameterClamping();
     testNonFiniteInputsAreRejected();
     testRoundedPolygonAndCircle();
+    testCompiledPresetBuildsFaceDrawing();
     testShapePathFlowsToFirmwareDrawing();
     std::cout << "shape core tests passed\n";
 }

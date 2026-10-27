@@ -18,10 +18,10 @@ const FacePresetDefinition* findFacePreset(std::string_view id)
     return nullptr;
 }
 
-const FacePresetDefinition& defaultFacePreset()
+const FacePresetDefinition* defaultFacePreset()
 {
-    // The compiler refuses an empty input set, so index zero is always safe.
-    return *generated::kFacePresets[0];
+    // This ID is a product decision, not an incidental source-file order.
+    return findFacePreset("idle-cat");
 }
 
 }  // namespace pet::preset

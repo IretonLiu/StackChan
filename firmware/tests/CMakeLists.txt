@@ -55,6 +55,7 @@ add_executable(shape_core_test
     ../main/pet/shape/rounded_polygon.cpp
     ../main/pet/shape/shape_path.cpp
     ../main/pet/shape/shape_face_adapter.cpp
+    ../main/pet/preset/face_preset_renderer.cpp
     ../main/pet/shape/soft_polygon.cpp
 )
 

@@ -38,6 +38,8 @@ class FacePresetCompilerTest(unittest.TestCase):
             ("concave", lambda value: value["nodes"][0]["rounded_polygon"].update(vertices=[[0, 0], [1, 0], [0.2, 0.2], [0, 1]]), "consistent winding"),
             ("unknown-field", lambda value: value.update(unexpected=True), "unknown field"),
             ("unknown-parent", lambda value: value["nodes"][1].update(parent="not-a-node"), "must name an earlier node"),
+            ("overflow", lambda value: value["nodes"][2]["circle"].update(radius=1e100), "must fit a finite C++ float"),
+            ("invalid-style", lambda value: value["nodes"][0].update(style=[]), "must be an object"),
         ]
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
@@ -48,6 +50,15 @@ class FacePresetCompilerTest(unittest.TestCase):
                 result = self.compile(source, output)
                 self.assertEqual(result.returncode, 2, name)
                 self.assertIn(expected, result.stderr, name)
+
+    def test_duplicate_scene_ids_fail_at_schema_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            duplicate = directory / "duplicate.petface.json"
+            duplicate.write_text(VALID.read_text())
+            result = subprocess.run([sys.executable, str(COMPILER), str(VALID), str(duplicate), "--output", str(directory / "out.h")], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("duplicates scene id 'idle-cat'", result.stderr)
 
 
 if __name__ == "__main__":

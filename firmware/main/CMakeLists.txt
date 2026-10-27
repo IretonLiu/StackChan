@@ -445,13 +445,18 @@ idf_component_register(SRCS ${SOURCES}
 # Compile face-scene source on the host. Firmware consumes the resulting typed
 # registry only; it never links a JSON parser or reads editable preset files.
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-file(GLOB PET_FACE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/*.petface.json")
+set(PET_FACE_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/manifest.cmake")
+include("${PET_FACE_MANIFEST}")
+set(PET_FACE_SOURCES)
+foreach(PET_FACE_FILE IN LISTS PET_FACE_FILES)
+    list(APPEND PET_FACE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/${PET_FACE_FILE}")
+endforeach()
 set(PET_FACE_GENERATED_HEADER "${CMAKE_CURRENT_BINARY_DIR}/pet_generated/face_presets.generated.h")
 add_custom_command(
     OUTPUT "${PET_FACE_GENERATED_HEADER}"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compile_face_presets.py"
             ${PET_FACE_SOURCES} --output "${PET_FACE_GENERATED_HEADER}"
-    DEPENDS ${PET_FACE_SOURCES} "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compile_face_presets.py"
+    DEPENDS ${PET_FACE_SOURCES} "${PET_FACE_MANIFEST}" "${CMAKE_CURRENT_SOURCE_DIR}/../tools/compile_face_presets.py"
     COMMENT "Compiling Pet Base face presets"
     VERBATIM
 )

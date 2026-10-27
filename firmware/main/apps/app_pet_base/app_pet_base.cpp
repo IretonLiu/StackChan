@@ -4,6 +4,8 @@
 #include "app_pet_base.h"
 
 #include <hal/pet/pet_hardware.h>
+#include <pet/preset/face_preset_registry.h>
+#include <pet/preset/face_preset_renderer.h>
 #include <mooncake_log.h>
 #include <smooth_lvgl.hpp>
 #include <string_view>
@@ -12,7 +14,6 @@ using namespace smooth_ui_toolkit::lvgl_cpp;
 
 namespace {
 constexpr std::string_view kTag = "PetBase";
-constexpr uint32_t kFaceUpdateIntervalMs      = 33;
 constexpr uint32_t kStackChanUpdateIntervalMs = 20;
 constexpr uint32_t kPetBlue = 0x12304A;
 }  // namespace
@@ -41,32 +42,25 @@ void AppPetBase::onOpen()
     _panel->setPaddingAll(0);
 
     _face_renderer = std::make_unique<pet::face::LvglFaceRenderer>(_panel->get());
+    const pet::preset::FacePresetDefinition* preset = pet::preset::defaultFacePreset();
+    if (preset == nullptr || !pet::preset::buildFaceDrawing(*preset, _preset_drawing)) {
+        mclog::tagError(kTag, "compiled default face preset is invalid");
+        return;
+    }
+    _face_renderer->render(_preset_drawing);
     const uint32_t now = PetHardware::millis();
-    _face_animator.reset(now);
-    _face_renderer->render(_face_animator.sample(now));
 
     // This image is a safe, inert starting point: no autonomous servo motion
     // until the behaviour layer owns it.
     PetHardware::enterSafeIdle(kPetBlue);
-    _last_face_update_ms       = now;
     _last_stackchan_update_ms = now;
 }
 
 void AppPetBase::onRunning()
 {
     const uint32_t now = PetHardware::millis();
-    if (PetHardware::consumeHeadPet()) {
-        _face_animator.onPetted(now);
-    }
-    if (PetHardware::consumeShake()) {
-        _face_animator.onShaken(now);
-    }
-
-    if (now - _last_face_update_ms >= kFaceUpdateIntervalMs) {
-        PetHardware::DisplayLock lock;
-        _face_renderer->render(_face_animator.sample(now));
-        _last_face_update_ms = now;
-    }
+    PetHardware::consumeHeadPet();
+    PetHardware::consumeShake();
 
     if (now - _last_stackchan_update_ms >= kStackChanUpdateIntervalMs) {
         _last_stackchan_update_ms = now;
