@@ -868,7 +868,8 @@ bool load(Scene& scene, const char* filename, std::string& error)
             error = where + ": must be an object";
             return false;
         }
-        if (!rejectUnknown(source, {"id", "kind", "parent", "style", "transform", "circle", "rounded_polygon"}, error,
+        if (!rejectUnknown(source,
+                           {"id", "kind", "parent", "style", "transform", "circle", "rounded_polygon", "motion"}, error,
                            where))
             return false;
         const char* id = source["id"];
