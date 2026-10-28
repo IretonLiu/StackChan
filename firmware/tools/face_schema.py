@@ -34,7 +34,7 @@ DEFAULT_CPP = {
 }
 LIMIT_CPP = {
     "max_nodes": ("pet::preset", "kMaxFacePresetNodes"),
-    "max_polygon_vertices": ("pet::shape", "kMaxRoundedPolygonVertices"),
+    "max_polygon_corners": ("pet::shape", "kMaxRoundedPolygonCorners"),
     "max_poses": ("pet::preset", "kMaxFacePresetPoses"),
     "max_pose_targets": ("pet::preset", "kMaxFacePoseTargets"),
     "max_animation_goals": ("pet::preset", "kMaxFaceAnimationGoals"),

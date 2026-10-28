@@ -1,88 +1,272 @@
 {
   "version": 1,
   "id": "idle-cat",
-  "background": [7, 16, 24],
+  "background": [
+    7,
+    16,
+    24
+  ],
   "nodes": [
     {
       "id": "left-ear",
       "kind": "rounded_polygon",
-      "style": { "color": [248, 245, 237] },
+      "style": {
+        "color": [
+          248,
+          245,
+          237
+        ]
+      },
       "transform": {
-        "translation": [87, 102],
+        "translation": [
+          87,
+          102
+        ],
         "rotation_degrees": -30,
-        "scale": [1, 1],
-        "pivot": [87, 102]
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          87,
+          102
+        ]
       },
       "rounded_polygon": {
-        "vertices": [[52, 102], [80, 38], [122, 102]],
         "corners": [
-          { "roundness": 0.15, "cap_tension": 0.55 },
-          { "roundness": 0.22, "cap_tension": 0.55 },
-          { "roundness": 0.15, "cap_tension": 0.55 }
+          {
+            "position": [
+              52,
+              102
+            ],
+            "roundness": 0.15,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              80,
+              38
+            ],
+            "roundness": 0.22,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              122,
+              102
+            ],
+            "roundness": 0.15,
+            "cap_tension": 0.55
+          }
         ],
-        "edges": [{ "bulge": 0.10 }, { "bulge": 0.10 }, {}]
+        "edges": [
+          {
+            "bulge": 0.1
+          },
+          {
+            "bulge": 0.1
+          },
+          {}
+        ]
       }
     },
     {
       "id": "right-ear",
       "kind": "rounded_polygon",
-      "style": { "color": [248, 245, 237] },
+      "style": {
+        "color": [
+          248,
+          245,
+          237
+        ]
+      },
       "transform": {
-        "translation": [233, 102],
+        "translation": [
+          233,
+          102
+        ],
         "rotation_degrees": 30,
-        "scale": [1, 1],
-        "pivot": [233, 102]
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          233,
+          102
+        ]
       },
       "rounded_polygon": {
-        "vertices": [[198, 102], [240, 38], [268, 102]],
         "corners": [
-          { "roundness": 0.15, "cap_tension": 0.55 },
-          { "roundness": 0.22, "cap_tension": 0.55 },
-          { "roundness": 0.15, "cap_tension": 0.55 }
+          {
+            "position": [
+              198,
+              102
+            ],
+            "roundness": 0.15,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              240,
+              38
+            ],
+            "roundness": 0.22,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              268,
+              102
+            ],
+            "roundness": 0.15,
+            "cap_tension": 0.55
+          }
         ],
-        "edges": [{ "bulge": 0.10 }, { "bulge": 0.10 }, {}]
+        "edges": [
+          {
+            "bulge": 0.1
+          },
+          {
+            "bulge": 0.1
+          },
+          {}
+        ]
       }
     },
     {
       "id": "left-eye",
       "kind": "rounded_polygon",
-      "style": { "color": [248, 245, 237] },
+      "style": {
+        "color": [
+          248,
+          245,
+          237
+        ]
+      },
       "transform": {
-        "translation": [130, 138],
+        "translation": [
+          130,
+          138
+        ],
         "rotation_degrees": 0,
-        "scale": [1, 1],
-        "pivot": [130, 138]
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          130,
+          138
+        ]
       },
       "rounded_polygon": {
-        "vertices": [[121, 116], [139, 116], [139, 160], [121, 160]],
         "corners": [
-          { "roundness": 0.20, "cap_tension": 0.55 },
-          { "roundness": 0.20, "cap_tension": 0.55 },
-          { "roundness": 0.20, "cap_tension": 0.55 },
-          { "roundness": 0.20, "cap_tension": 0.55 }
+          {
+            "position": [
+              121,
+              116
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              139,
+              116
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              139,
+              160
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              121,
+              160
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          }
         ],
-        "edges": [{}, {}, {}, {}]
+        "edges": [
+          {},
+          {},
+          {},
+          {}
+        ]
       }
     },
     {
       "id": "right-eye",
       "kind": "rounded_polygon",
-      "style": { "color": [248, 245, 237] },
+      "style": {
+        "color": [
+          248,
+          245,
+          237
+        ]
+      },
       "transform": {
-        "translation": [190, 138],
+        "translation": [
+          190,
+          138
+        ],
         "rotation_degrees": 0,
-        "scale": [1, 1],
-        "pivot": [190, 138]
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          190,
+          138
+        ]
       },
       "rounded_polygon": {
-        "vertices": [[181, 116], [199, 116], [199, 160], [181, 160]],
         "corners": [
-          { "roundness": 0.20, "cap_tension": 0.55 },
-          { "roundness": 0.20, "cap_tension": 0.55 },
-          { "roundness": 0.20, "cap_tension": 0.55 },
-          { "roundness": 0.20, "cap_tension": 0.55 }
+          {
+            "position": [
+              181,
+              116
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              199,
+              116
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              199,
+              160
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          },
+          {
+            "position": [
+              181,
+              160
+            ],
+            "roundness": 0.2,
+            "cap_tension": 0.55
+          }
         ],
-        "edges": [{}, {}, {}, {}]
+        "edges": [
+          {},
+          {},
+          {},
+          {}
+        ]
       }
     }
   ],
@@ -90,10 +274,26 @@
     {
       "id": "idle",
       "targets": [
-        { "node": "left-ear", "channel": "transform.rotation_degrees", "value": -30 },
-        { "node": "right-ear", "channel": "transform.rotation_degrees", "value": 30 },
-        { "node": "left-eye", "channel": "transform.scale_y", "value": 1 },
-        { "node": "right-eye", "channel": "transform.scale_y", "value": 1 }
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -30
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 30
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 1
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 1
+        }
       ]
     },
     {
@@ -103,25 +303,37 @@
           "node": "left-ear",
           "channel": "transform.rotation_degrees",
           "value": -12,
-          "response": { "frequency_hz": 4, "damping_ratio": 1 }
+          "response": {
+            "frequency_hz": 4,
+            "damping_ratio": 1
+          }
         },
         {
           "node": "right-ear",
           "channel": "transform.rotation_degrees",
           "value": 12,
-          "response": { "frequency_hz": 4, "damping_ratio": 1 }
+          "response": {
+            "frequency_hz": 4,
+            "damping_ratio": 1
+          }
         },
         {
           "node": "left-eye",
           "channel": "transform.scale_y",
           "value": 1.22,
-          "response": { "frequency_hz": 8, "damping_ratio": 1 }
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
         },
         {
           "node": "right-eye",
           "channel": "transform.scale_y",
           "value": 1.22,
-          "response": { "frequency_hz": 8, "damping_ratio": 1 }
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
         }
       ]
     }

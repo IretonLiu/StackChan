@@ -16,8 +16,8 @@ enum class FacePoseChannel : uint8_t {
     CircleCenterX,
     CircleCenterY,
     CircleRadius,
-    PolygonVertexX,
-    PolygonVertexY,
+    PolygonCornerX,
+    PolygonCornerY,
     PolygonCornerRoundness,
     PolygonCornerCapTension,
     PolygonEdgeBulge,
@@ -46,7 +46,7 @@ inline constexpr float kRadiusMaximum     = 4096.0f;
 
 namespace pet::shape {
 
-inline constexpr std::size_t kMaxRoundedPolygonVertices = 5;
+inline constexpr std::size_t kMaxRoundedPolygonCorners = 5;
 
 inline constexpr float kMinCornerRoundness = 0.0f;
 inline constexpr float kMaxCornerRoundness = 0.35f;

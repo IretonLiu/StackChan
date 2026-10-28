@@ -100,18 +100,18 @@ void appendCubic(ShapePath& path, const Affine2D& world, Vec2 first, Vec2 second
 
 bool validTopology(const RoundedPolygonParameters& value)
 {
-    if (value.vertex_count < 3 || value.vertex_count > kMaxRoundedPolygonVertices) {
+    if (value.corner_count < 3 || value.corner_count > kMaxRoundedPolygonCorners) {
         return false;
     }
 
     // A single winding direction at every turn makes the v1 primitive convex,
     // avoiding ambiguous outward rails and corner-patch self-intersections.
     float winding = 0.0f;
-    for (uint8_t index = 0; index < value.vertex_count; ++index) {
-        const size_t previous = (index + value.vertex_count - 1) % value.vertex_count;
-        const size_t next     = (index + 1) % value.vertex_count;
-        const Vec2 incoming   = subtract(value.vertices[index], value.vertices[previous]);
-        const Vec2 outgoing   = subtract(value.vertices[next], value.vertices[index]);
+    for (uint8_t index = 0; index < value.corner_count; ++index) {
+        const size_t previous = (index + value.corner_count - 1) % value.corner_count;
+        const size_t next     = (index + 1) % value.corner_count;
+        const Vec2 incoming   = subtract(value.corner_positions[index], value.corner_positions[previous]);
+        const Vec2 outgoing   = subtract(value.corner_positions[next], value.corner_positions[index]);
         if (length(incoming) < kMinimumEdgeLength || length(outgoing) < kMinimumEdgeLength) {
             return false;
         }
@@ -136,7 +136,7 @@ RoundedPolygonParameters clampParameters(const RoundedPolygonParameters& source,
         value                = std::clamp(value, low, high);
         was_clamped          = was_clamped || value != original;
     };
-    for (uint8_t index = 0; index < result.vertex_count; ++index) {
+    for (uint8_t index = 0; index < result.corner_count; ++index) {
         clampParameter(result.corners[index].roundness, kMinCornerRoundness, kMaxCornerRoundness);
         clampParameter(result.corners[index].cap_tension, kMinCapTension, kMaxCapTension);
         clampParameter(result.edges[index].bulge, -kMaxEdgeBulge, kMaxEdgeBulge);
@@ -166,12 +166,12 @@ bool sampleRoundedPolygon(const RoundedPolygonParameters& source, const Affine2D
                           PathStyle style)
 {
     sample = {};
-    if (source.vertex_count < 3 || source.vertex_count > kMaxRoundedPolygonVertices) {
-        sample.error = RoundedPolygonSampleError::InvalidVertexCount;
+    if (source.corner_count < 3 || source.corner_count > kMaxRoundedPolygonCorners) {
+        sample.error = RoundedPolygonSampleError::InvalidCornerCount;
         return false;
     }
-    for (uint8_t index = 0; index < source.vertex_count; ++index) {
-        if (!finite(source.vertices[index]) || !finite(source.corners[index]) || !finite(source.edges[index])) {
+    for (uint8_t index = 0; index < source.corner_count; ++index) {
+        if (!finite(source.corner_positions[index]) || !finite(source.corners[index]) || !finite(source.edges[index])) {
             sample.error = RoundedPolygonSampleError::NonFiniteParameters;
             return false;
         }
@@ -194,22 +194,22 @@ bool sampleRoundedPolygon(const RoundedPolygonParameters& source, const Affine2D
     result.path.style              = style;
     result.path.style.opacity      = std::clamp(result.path.style.opacity, 0.0f, 1.0f);
     result.path.style.stroke_width = std::max(0.0f, result.path.style.stroke_width);
-    const uint8_t count            = result.parameters.vertex_count;
+    const uint8_t count            = result.parameters.corner_count;
 
-    std::array<Vec2, kMaxRoundedPolygonVertices> incoming{};
-    std::array<Vec2, kMaxRoundedPolygonVertices> outgoing{};
-    std::array<float, kMaxRoundedPolygonVertices> corner_distances{};
+    std::array<Vec2, kMaxRoundedPolygonCorners> incoming{};
+    std::array<Vec2, kMaxRoundedPolygonCorners> outgoing{};
+    std::array<float, kMaxRoundedPolygonCorners> corner_distances{};
     for (uint8_t index = 0; index < count; ++index) {
         const size_t previous   = (index + count - 1) % count;
         const size_t next       = (index + 1) % count;
-        const Vec2 vertex       = result.parameters.vertices[index];
-        corner_distances[index] = std::min(length(subtract(result.parameters.vertices[previous], vertex)),
-                                           length(subtract(result.parameters.vertices[next], vertex))) *
+        const Vec2 vertex       = result.parameters.corner_positions[index];
+        corner_distances[index] = std::min(length(subtract(result.parameters.corner_positions[previous], vertex)),
+                                           length(subtract(result.parameters.corner_positions[next], vertex))) *
                                   result.parameters.corners[index].roundness;
-        incoming[index]         = add(
-            vertex, scale(normalized(subtract(result.parameters.vertices[previous], vertex)), corner_distances[index]));
-        outgoing[index] =
-            add(vertex, scale(normalized(subtract(result.parameters.vertices[next], vertex)), corner_distances[index]));
+        incoming[index] = add(vertex, scale(normalized(subtract(result.parameters.corner_positions[previous], vertex)),
+                                            corner_distances[index]));
+        outgoing[index] = add(vertex, scale(normalized(subtract(result.parameters.corner_positions[next], vertex)),
+                                            corner_distances[index]));
     }
 
     struct EdgeWork {
@@ -219,7 +219,7 @@ bool sampleRoundedPolygon(const RoundedPolygonParameters& source, const Affine2D
         Vec2 end_tangent{};
         float length = 0.0f;
     };
-    std::array<EdgeWork, kMaxRoundedPolygonVertices> edge_work{};
+    std::array<EdgeWork, kMaxRoundedPolygonCorners> edge_work{};
     for (uint8_t index = 0; index < count; ++index) {
         const size_t next = (index + 1) % count;
         EdgeWork& edge    = edge_work[index];
@@ -274,7 +274,7 @@ bool sampleRoundedPolygon(const RoundedPolygonParameters& source, const Affine2D
     append(result.path, {PathCommandType::Close, {}, {}, {}});
 
     for (uint8_t index = 0; index < count; ++index) {
-        result.landmarks[index] = transformPoint(world, result.parameters.vertices[index]);
+        result.landmarks[index] = transformPoint(world, result.parameters.corner_positions[index]);
     }
     if (!finite(result)) {
         sample.error = RoundedPolygonSampleError::NonFiniteGeometry;

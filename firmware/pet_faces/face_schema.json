@@ -2,13 +2,13 @@
   "version": 1,
   "limits": {
     "max_nodes": 16,
-    "max_polygon_vertices": 5,
     "max_poses": 8,
     "max_pose_targets": 32,
     "max_animation_goals": 8,
     "max_motion_programs": 8,
     "max_motion_tracks": 16,
-    "max_motion_keyframes": 8
+    "max_motion_keyframes": 8,
+    "max_polygon_corners": 5
   },
   "ranges": {
     "coordinate": {
@@ -108,15 +108,15 @@
       "range": "circle_radius"
     },
     {
-      "id": "rounded_polygon.vertex_x",
-      "enum": "PolygonVertexX",
+      "id": "rounded_polygon.corner_x",
+      "enum": "PolygonCornerX",
       "kind": "rounded_polygon",
       "element": true,
       "range": "coordinate"
     },
     {
-      "id": "rounded_polygon.vertex_y",
-      "enum": "PolygonVertexY",
+      "id": "rounded_polygon.corner_y",
+      "enum": "PolygonCornerY",
       "kind": "rounded_polygon",
       "element": true,
       "range": "coordinate"

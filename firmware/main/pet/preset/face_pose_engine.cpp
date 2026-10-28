@@ -28,8 +28,8 @@ bool sameChannel(const FacePoseRuntimeTarget& runtime, const FacePoseTargetDefin
 
 bool polygonElementValid(const FacePresetNodeDefinition& node, uint8_t element_index)
 {
-    return node.kind == ShapeKind::RoundedPolygon && element_index < node.rounded_polygon.vertex_count &&
-           element_index < shape::kMaxRoundedPolygonVertices;
+    return node.kind == ShapeKind::RoundedPolygon && element_index < node.rounded_polygon.corner_count &&
+           element_index < shape::kMaxRoundedPolygonCorners;
 }
 
 template <typename Evaluation>
@@ -80,14 +80,14 @@ bool locateChannelImpl(Evaluation& evaluation, uint8_t node_index, FacePoseChann
             value = &node.circle.radius;
             range = kRadiusRange;
             return true;
-        case FacePoseChannel::PolygonVertexX:
+        case FacePoseChannel::PolygonCornerX:
             if (!polygonElementValid(node, element_index)) return false;
-            value = &node.rounded_polygon.vertices[element_index].x;
+            value = &node.rounded_polygon.corner_positions[element_index].x;
             range = kCoordinateRange;
             return true;
-        case FacePoseChannel::PolygonVertexY:
+        case FacePoseChannel::PolygonCornerY:
             if (!polygonElementValid(node, element_index)) return false;
-            value = &node.rounded_polygon.vertices[element_index].y;
+            value = &node.rounded_polygon.corner_positions[element_index].y;
             range = kCoordinateRange;
             return true;
         case FacePoseChannel::PolygonCornerRoundness:

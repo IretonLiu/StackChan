@@ -50,12 +50,12 @@ bool invalidIntermediateThenTarget(MotionResponseState& state, float target, flo
 FacePresetEvaluation baseEvaluation()
 {
     FacePresetEvaluation result;
-    result.node_count                            = 2;
-    result.nodes[0].kind                         = ShapeKind::Circle;
-    result.nodes[0].circle                       = {{120.0f, 120.0f}, 6.0f};
-    result.nodes[1].kind                         = ShapeKind::RoundedPolygon;
-    result.nodes[1].rounded_polygon.vertex_count = 4;
-    result.nodes[1].rounded_polygon.vertices     = {{{0.0f, 0.0f}, {40.0f, 0.0f}, {40.0f, 40.0f}, {0.0f, 40.0f}}};
+    result.node_count                                = 2;
+    result.nodes[0].kind                             = ShapeKind::Circle;
+    result.nodes[0].circle                           = {{120.0f, 120.0f}, 6.0f};
+    result.nodes[1].kind                             = ShapeKind::RoundedPolygon;
+    result.nodes[1].rounded_polygon.corner_count     = 4;
+    result.nodes[1].rounded_polygon.corner_positions = {{{0.0f, 0.0f}, {40.0f, 0.0f}, {40.0f, 40.0f}, {0.0f, 40.0f}}};
     for (uint8_t index = 0; index < 4; ++index) {
         result.nodes[1].rounded_polygon.corners[index] = {0.08f, 0.55f};
         result.nodes[1].rounded_polygon.edges[index]   = {0.0f, 0.28f, 0.28f};
@@ -143,12 +143,12 @@ void testInvalidDefinitionsDoNotReplaceRuntime()
 
 void testOutOfBoundsPolygonTargetIsRejected()
 {
-    const FacePoseTargetDefinition targets[] = {{1, FacePoseChannel::PolygonVertexX, 5, 10.0f, profile()}};
+    const FacePoseTargetDefinition targets[] = {{1, FacePoseChannel::PolygonCornerX, 5, 10.0f, profile()}};
     const FacePoseDefinition poses[]         = {{"wide", targets, 1}};
     const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1};
     FacePresetEvaluation base = baseEvaluation();
     // A hand-built evaluation can claim more vertices than the fixed array holds.
-    base.nodes[1].rounded_polygon.vertex_count = 6;
+    base.nodes[1].rounded_polygon.corner_count = 6;
     FacePoseRuntime runtime;
 
     assert(!pet::preset::selectFacePose(preset, "wide", base, runtime));
@@ -178,7 +178,7 @@ void testAdvanceReportsOnlyVisibleMovement()
 
 void testRejectedIntermediateStateDoesNotStallPose()
 {
-    const FacePoseTargetDefinition targets[] = {{1, FacePoseChannel::PolygonVertexX, 1, 30.0f, profile()}};
+    const FacePoseTargetDefinition targets[] = {{1, FacePoseChannel::PolygonCornerX, 1, 30.0f, profile()}};
     const FacePoseDefinition poses[]         = {{"wide", targets, 1}};
     const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1};
     const FacePresetEvaluation base = baseEvaluation();
@@ -191,7 +191,7 @@ void testRejectedIntermediateStateDoesNotStallPose()
     bool changed = false;
     assert(pet::preset::advanceFacePose(runtime, 0.02f, evaluation, &changed));
     assert(changed);
-    assert(near(evaluation.nodes[1].rounded_polygon.vertices[1].x, 30.0f));
+    assert(near(evaluation.nodes[1].rounded_polygon.corner_positions[1].x, 30.0f));
 }
 
 }  // namespace

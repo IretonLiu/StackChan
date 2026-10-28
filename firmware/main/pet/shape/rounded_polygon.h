@@ -13,20 +13,23 @@
 namespace pet::shape {
 
 /**
- * Canonical local-space source geometry for a convex rounded polygon. The
- * directed edge at index i runs from vertex i to vertex (i + 1) % count.
- * Corners own tangent rails; edge controls are derived from those rails.
+ * Canonical local-space source geometry for a convex rounded polygon. A corner is
+ * the smallest primitive: it owns rounding and tangent length, and its joint is the
+ * point the edges run through. The directed edge at index i joins corner i to corner
+ * (i + 1) % count. Edge controls are derived from the corner tangent rails.
  */
 struct RoundedPolygonParameters {
-    uint8_t vertex_count = 0;
-    std::array<Vec2, kMaxRoundedPolygonVertices> vertices{};
-    std::array<CornerControls, kMaxRoundedPolygonVertices> corners{};
-    std::array<EdgeTension, kMaxRoundedPolygonVertices> edges{};
+    uint8_t corner_count = 0;
+    // Derived view of the corner joints, written in lockstep with corners[].position by
+    // the preset compiler and the studio. Vertices are not an authored primitive.
+    std::array<Vec2, kMaxRoundedPolygonCorners> corner_positions{};
+    std::array<CornerControls, kMaxRoundedPolygonCorners> corners{};
+    std::array<EdgeTension, kMaxRoundedPolygonCorners> edges{};
 };
 
 enum class RoundedPolygonSampleError : uint8_t {
     None,
-    InvalidVertexCount,
+    InvalidCornerCount,
     NonFiniteParameters,
     NonFiniteTransform,
     NonFiniteStyle,
@@ -50,9 +53,9 @@ struct RoundedPolygonCornerGeometry {
 
 struct RoundedPolygonSample {
     ShapePath path{};
-    std::array<Vec2, kMaxRoundedPolygonVertices> landmarks{};
-    std::array<RoundedPolygonEdgeGeometry, kMaxRoundedPolygonVertices> edges{};
-    std::array<RoundedPolygonCornerGeometry, kMaxRoundedPolygonVertices> corners{};
+    std::array<Vec2, kMaxRoundedPolygonCorners> landmarks{};
+    std::array<RoundedPolygonEdgeGeometry, kMaxRoundedPolygonCorners> edges{};
+    std::array<RoundedPolygonCornerGeometry, kMaxRoundedPolygonCorners> corners{};
     RoundedPolygonParameters parameters{};
     bool parameters_were_clamped    = false;
     RoundedPolygonSampleError error = RoundedPolygonSampleError::None;

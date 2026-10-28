@@ -48,12 +48,12 @@ FacePresetEvaluationError validateNode(const FacePresetNodeDefinition& node, uin
     if (node.kind != ShapeKind::RoundedPolygon) return FacePresetEvaluationError::InvalidNodeKind;
 
     const shape::RoundedPolygonParameters& polygon = node.rounded_polygon;
-    if (polygon.vertex_count < 3 || polygon.vertex_count > shape::kMaxRoundedPolygonVertices)
+    if (polygon.corner_count < 3 || polygon.corner_count > shape::kMaxRoundedPolygonCorners)
         return FacePresetEvaluationError::InvalidPolygon;
-    for (uint8_t vertex = 0; vertex < polygon.vertex_count; ++vertex) {
-        const shape::CornerControls& corner = polygon.corners[vertex];
-        const shape::EdgeTension& edge      = polygon.edges[vertex];
-        if (!finite(polygon.vertices[vertex]) || !finite(corner.roundness) || !finite(corner.cap_tension) ||
+    for (uint8_t index = 0; index < polygon.corner_count; ++index) {
+        const shape::CornerControls& corner = polygon.corners[index];
+        const shape::EdgeTension& edge      = polygon.edges[index];
+        if (!finite(polygon.corner_positions[index]) || !finite(corner.roundness) || !finite(corner.cap_tension) ||
             !finite(edge.bulge) || !finite(edge.start) || !finite(edge.end))
             return FacePresetEvaluationError::NonFiniteValue;
     }
