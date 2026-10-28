@@ -218,7 +218,8 @@ int main(int argc, char** argv)
                     replaced_action  = true;
                 } else if (action == Pending::Reset) {
                     resetScene(document);
-                    replaced_action = true;
+                    editor.selection = 0;
+                    replaced_action  = true;
                 } else if (action == Pending::Load) {
                     replaced_action = loadSession(document, editor);
                 } else if (action == Pending::Quit) {

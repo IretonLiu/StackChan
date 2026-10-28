@@ -29,9 +29,6 @@ size_t motionDescriptorCount();
 /** Descriptor for `property`, or nullptr when out of range. */
 const MotionDescriptor* findMotionDescriptor(MotionProperty property);
 
-/** Safe clamp range for `property`; zero range when unknown. */
-pet::preset::MotionRange motionRange(MotionProperty property);
-
 /** User-facing label for `property`; "unknown" when out of range. */
 const char* motionPropertyLabel(MotionProperty property);
 

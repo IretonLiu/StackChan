@@ -39,12 +39,6 @@ const MotionDescriptor* findMotionDescriptor(MotionProperty property)
     return descriptor.property == property ? &descriptor : nullptr;
 }
 
-pet::preset::MotionRange motionRange(MotionProperty property)
-{
-    const MotionDescriptor* descriptor = findMotionDescriptor(property);
-    return descriptor != nullptr ? descriptor->range : pet::preset::MotionRange{};
-}
-
 const char* motionPropertyLabel(MotionProperty property)
 {
     const MotionDescriptor* descriptor = findMotionDescriptor(property);

@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "panels.h"
 
-#include "compiler.h"
 #include "document.h"
 #include "geometry.h"
 #include "motion_model.h"
@@ -21,7 +20,7 @@ namespace {
 using namespace pet::shape;
 }  // namespace
 
-bool resetPopup(const char* label, const char* text)
+static bool resetPopup(const char* label, const char* text)
 {
     const std::string id = std::string("##reset-") + label;
     if (!ImGui::BeginPopupContextItem(id.c_str())) return false;
@@ -30,8 +29,8 @@ bool resetPopup(const char* label, const char* text)
     return reset;
 }
 
-bool floatField(const char* label, float& value, float minimum, float maximum, float default_value, float speed,
-                const char* format)
+static bool floatField(const char* label, float& value, float minimum, float maximum, float default_value, float speed,
+                       const char* format = "%.2f")
 {
     bool changed      = false;
     const float width = ImGui::GetContentRegionAvail().x;
@@ -53,7 +52,8 @@ bool floatField(const char* label, float& value, float minimum, float maximum, f
     return changed;
 }
 
-bool pointField(const char* label, Vec2& value, Vec2 default_value, float speed, float minimum, float maximum)
+static bool pointField(const char* label, Vec2& value, Vec2 default_value, float speed,
+                       float minimum = kMinNodeCoordinate, float maximum = kMaxNodeCoordinate)
 {
     bool changed = ImGui::DragFloat2(label, &value.x, speed, minimum, maximum, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     if (!std::isfinite(value.x) || !std::isfinite(value.y)) value = default_value;

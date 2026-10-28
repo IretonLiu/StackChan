@@ -19,11 +19,4 @@ bool scenePanel(SceneDoc& document, EditorState& editor);
 
 bool inspector(SceneDoc& document, EditorState& editor);
 
-// Shared ImGui field helpers (also used by panels internally).
-bool resetPopup(const char* label, const char* text);
-bool floatField(const char* label, float& value, float minimum, float maximum, float default_value, float speed,
-                const char* format = "%.2f");
-bool pointField(const char* label, pet::shape::Vec2& value, pet::shape::Vec2 default_value, float speed,
-                float minimum = -4096.0f, float maximum = 4096.0f);
-
 }  // namespace kiwi::studio
