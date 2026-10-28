@@ -52,36 +52,77 @@ bool setCornerCount(SceneDoc& document, size_t node_index, uint8_t count, std::s
         error = "Corner count must be 3.." + std::to_string(pet::shape::kMaxRoundedPolygonCorners);
         return false;
     }
-    if (count > node.polygon.corner_count) {
-        // Grow the ring by splitting the closing edge. The new joint is pushed away from
-        // the centroid so it is a real corner, not a collinear (degenerate) point that the
-        // validator and sampler would reject.
-        Vec2 centroid{};
-        for (uint8_t index = 0; index < node.polygon.corner_count; ++index) {
-            centroid.x += node.polygon.corner_positions[index].x;
-            centroid.y += node.polygon.corner_positions[index].y;
-        }
-        centroid.x /= float(node.polygon.corner_count);
-        centroid.y /= float(node.polygon.corner_count);
-        for (uint8_t index = node.polygon.corner_count; index < count; ++index) {
-            const Vec2& end   = node.polygon.corner_positions[index - 1];
-            const Vec2& start = node.polygon.corner_positions[0];
-            Vec2 middle{(end.x + start.x) * 0.5f, (end.y + start.y) * 0.5f};
-            Vec2 away{middle.x - centroid.x, middle.y - centroid.y};
-            const float away_length = std::sqrt(away.x * away.x + away.y * away.y);
-            const float edge_length =
-                std::sqrt((start.x - end.x) * (start.x - end.x) + (start.y - end.y) * (start.y - end.y));
-            if (away_length > 1e-4f) {
-                middle.x += away.x / away_length * edge_length * 0.15f;
-                middle.y += away.y / away_length * edge_length * 0.15f;
+
+    const auto distance = [](Vec2 a, Vec2 b) {
+        const float dx = b.x - a.x;
+        const float dy = b.y - a.y;
+        return std::sqrt(dx * dx + dy * dy);
+    };
+
+    // Grow one corner at a time by splitting the longest edge. Splitting the longest edge
+    // is what keeps a skewed polygon growable: the feasible outward displacement (the
+    // convexity window) is widest there. Appending on a fixed edge collapses two corners
+    // onto the same short edge and can leave no valid, non-degenerate position at all.
+    while (node.polygon.corner_count < count) {
+        pet::shape::RoundedPolygonParameters& polygon = node.polygon;
+        const uint8_t ring                            = polygon.corner_count;
+        uint8_t edge                                  = 0;
+        float longest                                 = 0.0f;
+        for (uint8_t index = 0; index < ring; ++index) {
+            const float span = distance(polygon.corner_positions[index], polygon.corner_positions[(index + 1) % ring]);
+            if (span > longest) {
+                longest = span;
+                edge    = index;
             }
-            node.polygon.corner_positions[index] = middle;
-            node.polygon.corners[index] = {pet::shape::kDefaultCornerRoundness, pet::shape::kDefaultCapTension};
-            node.polygon.edges[index]   = {pet::shape::kDefaultEdgeBulge, pet::shape::kDefaultEdgeHandle,
-                                           pet::shape::kDefaultEdgeHandle};
+        }
+        if (longest < 1e-4f) {
+            error = "Polygon has a zero-length edge";
+            return false;
+        }
+
+        const Vec2 start = polygon.corner_positions[edge];
+        const Vec2 end   = polygon.corner_positions[(edge + 1) % ring];
+        const Vec2 middle{(start.x + end.x) * 0.5f, (start.y + end.y) * 0.5f};
+        const Vec2 direction{(end.x - start.x) / longest, (end.y - start.y) / longest};
+        float winding = 0.0f;
+        for (uint8_t index = 0; index < ring && winding == 0.0f; ++index)
+            winding = cross(polygon.corner_positions[(index + ring - 1) % ring], polygon.corner_positions[index],
+                            polygon.corner_positions[(index + 1) % ring]);
+        const Vec2 outward = winding >= 0.0f ? Vec2{direction.y, -direction.x} : Vec2{-direction.y, direction.x};
+        const float reach =
+            0.35f * std::min({longest, distance(polygon.corner_positions[(edge + ring - 1) % ring], start),
+                              distance(end, polygon.corner_positions[(edge + 2) % ring])});
+        const uint8_t insert = uint8_t(edge + 1);
+
+        // Largest outward offset first (a pronounced, readable corner), then shrink until
+        // the engine's own sampler accepts the ring. That makes the result exactly what the
+        // canvas and the preset compiler will later see.
+        bool placed = false;
+        for (const float factor : {1.0f, 0.8f, 0.6f, 0.45f, 0.3f, 0.2f, 0.12f, 0.08f, 0.05f, 0.03f, 0.02f, 0.01f}) {
+            pet::shape::RoundedPolygonParameters trial = polygon;
+            for (uint8_t index = ring; index > insert; --index) {
+                trial.corner_positions[index] = trial.corner_positions[index - 1];
+                trial.corners[index]          = trial.corners[index - 1];
+                trial.edges[index]            = trial.edges[index - 1];
+            }
+            trial.corner_positions[insert] = {middle.x + outward.x * reach * factor,
+                                              middle.y + outward.y * reach * factor};
+            trial.corners[insert]          = {pet::shape::kDefaultCornerRoundness, pet::shape::kDefaultCapTension};
+            trial.edges[insert]            = polygon.edges[edge];
+            trial.edges[edge]              = polygon.edges[edge];
+            trial.corner_count             = uint8_t(ring + 1);
+            pet::shape::RoundedPolygonSample sample;
+            if (pet::shape::sampleRoundedPolygon(trial, {}, sample)) {
+                polygon = trial;
+                placed  = true;
+                break;
+            }
+        }
+        if (!placed) {
+            error = "Could not grow the polygon without breaking convexity";
+            return false;
         }
     }
-    node.polygon.corner_count = count;
     return true;
 }
 

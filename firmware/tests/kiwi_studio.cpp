@@ -26,36 +26,50 @@ int runCli(int argc, char** argv)
     if (argc < 2) return -1;
     const std::string mode = argv[1];
     if (mode == "--selftest") {
-        // Headless check of the document growth path the inspector uses.
-        SceneDoc scene;
-        resetScene(scene);
+        // Headless check of the document growth path the inspector uses. The extra shapes
+        // are skewed/extreme rings that used to grow into non-convex (invalid) polygons.
+        struct GrowthCase {
+            const char* name;
+            uint8_t corners;
+            std::array<pet::shape::Vec2, 5> positions;
+        };
+        const GrowthCase cases[] = {
+            {"ear", 3, {{{-30, 20}, {0, -35}, {30, 20}}}},
+            {"thin", 3, {{{32.9f, 73.6f}, {29.4f, 89.4f}, {29.4f, -89.3f}}}},
+            {"flat", 3, {{{-201.9f, 18.0f}, {-261.7f, 1.4f}, {242.3f, -10.7f}}}},
+            {"rectangle", 4, {{{121, 116}, {139, 116}, {139, 160}, {121, 160}}}},
+            {"skew-quad", 4, {{{232.5f, 77.4f}, {214.6f, 163.6f}, {160.4f, -281.6f}, {222.7f, -132.6f}}}},
+        };
         int failures = 0;
-        for (size_t index = 0; index < scene.count; ++index) {
-            if (scene.nodes[index].kind != Kind::Polygon) continue;
+        for (const GrowthCase& test : cases) {
+            SceneDoc scene;
+            scene.nodes[0].id                       = "test";
+            scene.nodes[0].kind                     = Kind::Polygon;
+            scene.nodes[0].polygon.corner_count     = test.corners;
+            scene.nodes[0].polygon.corner_positions = test.positions;
+            scene.count                             = 1;
             for (const uint8_t target : {uint8_t(4), uint8_t(5)}) {
+                if (target <= test.corners) continue;
                 SceneDoc trial = scene;
                 std::string error;
-                if (!setCornerCount(trial, index, target, error)) {
-                    printf("selftest: grow node %zu to %u failed: %s\n", index, target, error.c_str());
+                if (!setCornerCount(trial, 0, target, error)) {
+                    printf("selftest: %s to %u failed: %s\n", test.name, target, error.c_str());
                     ++failures;
                     continue;
                 }
                 Problem problem;
                 if (!validateScene(trial, problem)) {
-                    printf("selftest: validate node %zu at %u failed: %s\n", index, target,
-                           problem.formatted().c_str());
+                    printf("selftest: %s at %u invalid: %s\n", test.name, target, problem.formatted().c_str());
                     ++failures;
                     continue;
                 }
                 pet::shape::RoundedPolygonSample sample;
-                if (!pet::shape::sampleRoundedPolygon(trial.nodes[index].polygon,
-                                                      pet::shape::makeAffine(trial.nodes[index].transform), sample,
-                                                      trial.nodes[index].style)) {
-                    printf("selftest: sample node %zu at %u failed\n", index, target);
+                if (!pet::shape::sampleRoundedPolygon(trial.nodes[0].polygon, {}, sample, trial.nodes[0].style)) {
+                    printf("selftest: %s at %u does not sample\n", test.name, target);
                     ++failures;
                     continue;
                 }
-                printf("selftest: node %zu at %u corners ok (%u path commands)\n", index, target,
+                printf("selftest: %s at %u corners ok (%u path commands)\n", test.name, target,
                        sample.path.command_count);
             }
         }
