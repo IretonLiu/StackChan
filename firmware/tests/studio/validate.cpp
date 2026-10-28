@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "validate.h"
 
+#include "animations.h"
 #include "geometry.h"
 #include "motion_model.h"
 
@@ -112,6 +113,9 @@ bool validateScene(const SceneDoc& document, Problem& problem)
         const char* problem_text = shapeProblem(document.nodes[index], worlds[index]);
         if (problem_text != nullptr) return fail(problem, "nodes[" + std::to_string(index) + "]", problem_text);
     }
+
+    std::string animation_error;
+    if (!validateAnimations(document, animation_error)) return fail(problem, {}, animation_error);
     return true;
 }
 

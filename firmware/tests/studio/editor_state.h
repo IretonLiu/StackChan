@@ -41,9 +41,8 @@ struct EditorState {
     // Motion preview clock shared by every node.
     MotionPreview motion{};
 
-    // Compiler-owned animations parsed for display + preview. Read-only for now: the
-    // document keeps the authored JSON verbatim, so this never marks the scene dirty.
-    AnimationDoc animation{};
+    // Animation preview clock. The model itself lives in SceneDoc::animations so edits
+    // participate in undo/redo and are saved with the scene.
     struct AnimationPreview {
         bool playing       = false;
         int goal_index     = -1;

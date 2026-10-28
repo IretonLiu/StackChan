@@ -66,8 +66,8 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
         }
     }
     if (editor.animation_preview.playing) {
-        applyAnimationFrame(editor.animation, editor.animation_preview.goal_index,
-                            editor.animation_preview.time_seconds, display.nodes, display.count);
+        applyAnimationFrame(document, editor.animation_preview.goal_index, editor.animation_preview.time_seconds,
+                            display.nodes, display.count);
     }
     auto a          = ImGui::GetContentRegionAvail();
     const float fit = std::max(.1f, std::min((a.x - 10) / kDisplayWidth, (a.y - 10) / kDisplayHeight));

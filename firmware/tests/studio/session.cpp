@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: MIT */
 #include "session.h"
 
-#include "animations.h"
 #include "persistence.h"
 #include "validate.h"
 
 #include <string>
+#include <utility>
 
 namespace kiwi::studio {
 
@@ -29,27 +29,22 @@ bool loadSession(SceneDoc& document, EditorState& editor, const std::string& pat
 {
     SceneDoc candidate;
     std::string error;
-    // load() is transactional, and the animation parse runs against the candidate too, so
-    // neither the scene nor `file_path` moves until the whole document is accepted.
+    // load() is transactional, so neither the scene nor `file_path` moves until the new
+    // file (geometry + animations) has been accepted.
     if (!load(candidate, path.c_str(), error)) {
         editor.status = error;
         return false;
     }
-    AnimationDoc animations;
-    if (!parseAnimations(candidate.poses_json, candidate.animations_json, candidate, animations, error)) {
-        editor.status = error;
-        return false;
-    }
     document                            = std::move(candidate);
-    editor.animation                    = std::move(animations);
     editor.animation_preview            = {};
-    editor.animation_preview.goal_index = editor.animation.findGoal(editor.animation.default_goal);
+    editor.animation_preview.goal_index = document.animations.findGoal(document.animations.default_goal);
     editor.file_path                    = path;
     editor.selection                    = document.count == 0 ? -1 : 0;
     editor.dirty                        = false;
-    editor.status = editor.animation.empty()
-                        ? "Loaded " + path
-                        : "Loaded " + path + " (" + std::to_string(editor.animation.goal_count) + " animation goals)";
+    editor.status =
+        document.animations.empty()
+            ? "Loaded " + path
+            : "Loaded " + path + " (" + std::to_string(document.animations.goal_count) + " animation goals)";
     return true;
 }
 

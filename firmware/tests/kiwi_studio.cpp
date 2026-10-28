@@ -50,6 +50,7 @@ int runCli(int argc, char** argv)
             scene.nodes[0].polygon.corner_count     = test.corners;
             scene.nodes[0].polygon.corner_positions = test.positions;
             scene.count                             = 1;
+            makeDefaultAnimation(scene.animations);
             for (const uint8_t target : {uint8_t(4), uint8_t(5)}) {
                 if (target <= test.corners) continue;
                 SceneDoc trial = scene;
@@ -88,7 +89,8 @@ int runCli(int argc, char** argv)
         for (const FilePickerEntry& entry : entries) printf("%s%s\n", entry.name.c_str(), entry.directory ? "/" : "");
         return 0;
     }
-    if (mode != "--validate" && mode != "--roundtrip" && mode != "--export-svg" && mode != "--animation-selftest")
+    if (mode != "--validate" && mode != "--roundtrip" && mode != "--export-svg" && mode != "--animation-selftest" &&
+        mode != "--animation-author-selftest")
         return -1;
     SceneDoc document;
     std::string error;
@@ -97,11 +99,7 @@ int runCli(int argc, char** argv)
         return 2;
     }
     printf("kiwi_studio: loaded %s (%zu nodes)\n", argv[2], document.count);
-    AnimationDoc animations;
-    if (!parseAnimations(document.poses_json, document.animations_json, document, animations, error)) {
-        fprintf(stderr, "kiwi_studio: %s\n", error.c_str());
-        return 2;
-    }
+    const AnimationDoc& animations = document.animations;
     if (!animations.empty())
         printf("kiwi_studio: %u animation goals, %u poses\n", unsigned(animations.goal_count),
                unsigned(animations.pose_count));
@@ -128,7 +126,7 @@ int runCli(int argc, char** argv)
         const auto approx = [](float a, float b) { return std::fabs(a - b) < 0.01f; };
         const auto sample = [&](float time) {
             std::array<Node, kMaxNodes> nodes = document.nodes;
-            applyAnimationFrame(animations, goal_index, time, nodes, document.count);
+            applyAnimationFrame(document, goal_index, time, nodes, document.count);
             return nodes;
         };
         int failures = 0;
@@ -158,6 +156,58 @@ int runCli(int argc, char** argv)
         }
         if (failures == 0) printf("animation-selftest: blink and ear-drift sampled correctly\n");
         return failures == 0 ? 0 : 1;
+    }
+    if (mode == "--animation-author-selftest") {
+        if (argc < 4) {
+            fprintf(stderr, "usage: kiwi_studio --animation-author-selftest <input> <output>\n");
+            return 2;
+        }
+        AnimationDoc& animation = document.animations;
+        if (animation.pose_count >= kMaxPoses || animation.goal_count >= kMaxAnimationGoals) {
+            fprintf(stderr, "kiwi_studio: no room to add an authored pose/goal\n");
+            return 2;
+        }
+        Pose& pose              = animation.poses[animation.pose_count];
+        pose                    = {};
+        pose.id                 = "author-pose";
+        pose.target_count       = 1;
+        pose.targets[0].node_id = "left-ear";
+        pose.targets[0].channel = "transform.rotation_degrees";
+        pose.targets[0].value   = -40.0f;
+        ++animation.pose_count;
+
+        AnimationGoal& goal = animation.goals[animation.goal_count];
+        goal                = {};
+        goal.id             = "author-goal";
+        goal.pose_id        = "author-pose";
+        goal.program_count  = 1;
+        ++animation.goal_count;
+
+        AnimationProgram& program = goal.programs[0];
+        program                   = {};
+        program.id                = "author-program";
+        program.duration_seconds  = 2.0f;
+        program.loop              = true;
+        program.track_count       = 1;
+        AnimationTrack& track     = program.tracks[0];
+        track                     = {};
+        track.node_id             = "left-ear";
+        track.channel             = "transform.rotation_degrees";
+        track.sine                = true;
+        track.center              = -40.0f;
+        track.amplitude           = 10.0f;
+        track.period_seconds      = 2.0f;
+
+        if (!validateScene(document, error)) {
+            fprintf(stderr, "kiwi_studio: authored scene invalid: %s\n", error.c_str());
+            return 2;
+        }
+        if (!save(document, argv[3])) {
+            fprintf(stderr, "kiwi_studio: could not write %s\n", argv[3]);
+            return 2;
+        }
+        printf("kiwi_studio: wrote authored scene %s\n", argv[3]);
+        return 0;
     }
     if (mode == "--roundtrip") {
         const char* output = argc >= 4 ? argv[3] : "/tmp/kiwi-studio-roundtrip.petface.json";
@@ -285,12 +335,12 @@ int main(int argc, char** argv)
             preview.time_seconds += ImGui::GetIO().DeltaTime;
             if (preview.time_seconds > 600.0f) preview.time_seconds = std::fmod(preview.time_seconds, 600.0f);
             const int goal_index = preview.goal_index;
-            if (goal_index < 0 || goal_index >= int(editor.animation.goal_count)) {
+            if (goal_index < 0 || goal_index >= int(document.animations.goal_count)) {
                 preview.playing = false;
             } else {
-                const AnimationGoal& goal = editor.animation.goals[goal_index];
+                const AnimationGoal& goal = document.animations.goals[goal_index];
                 if (goal.duration_ms > 0 && preview.time_seconds * 1000.0f >= float(goal.duration_ms)) {
-                    const int default_index = editor.animation.findGoal(editor.animation.default_goal);
+                    const int default_index = document.animations.findGoal(document.animations.default_goal);
                     if (default_index >= 0 && default_index != goal_index) {
                         preview.goal_index   = default_index;
                         preview.time_seconds = 0.0f;
@@ -378,13 +428,11 @@ int main(int argc, char** argv)
                 if (action == Pending::New) {
                     clearScene(document);
                     editor.selection         = -1;
-                    editor.animation         = {};
                     editor.animation_preview = {};
                     replaced_action          = true;
                 } else if (action == Pending::Reset) {
                     resetScene(document);
                     editor.selection         = 0;
-                    editor.animation         = {};
                     editor.animation_preview = {};
                     replaced_action          = true;
                 } else if (action == Pending::Load) {

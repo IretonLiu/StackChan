@@ -176,7 +176,9 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
 
     add_executable(kiwi_studio
         kiwi_studio.cpp
+        studio/animation_io.cpp
         studio/animations.cpp
+        studio/channels.cpp
         studio/canvas.cpp
         studio/compiler.cpp
         studio/document.cpp
@@ -227,6 +229,14 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
     add_test(NAME kiwi_studio_animation_selftest
         COMMAND $<TARGET_FILE:kiwi_studio> --animation-selftest
                 ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/idle.petface.json)
+
+    add_test(NAME kiwi_studio_animation_author
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/studio_animation_author_test.py
+                $<TARGET_FILE:kiwi_studio>
+                ${CMAKE_CURRENT_SOURCE_DIR}/../tools/compile_face_presets.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/idle.petface.json
+                ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/pose_contract.json
+                ${CMAKE_CURRENT_BINARY_DIR})
 
     add_test(NAME kiwi_studio_list_scenes
         COMMAND $<TARGET_FILE:kiwi_studio> --list-scenes

@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #include "document.h"
 
+#include "animations.h"
+
 #include "geometry.h"
 
 #include <algorithm>
@@ -141,11 +143,13 @@ void resetScene(SceneDoc& document)
     document.nodes[3]        = makeNode(document, Kind::Circle);
     document.nodes[3].circle = {{202, 138}, 12};
     ++document.count;
+    makeDefaultAnimation(document.animations);
 }
 
 void clearScene(SceneDoc& document)
 {
     document = {};
+    makeDefaultAnimation(document.animations);
 }
 
 int nodeDepth(const SceneDoc& document, int index)

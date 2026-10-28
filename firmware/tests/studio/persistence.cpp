@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #include "persistence.h"
 
+#include "animation_io.h"
+
 #include "geometry.h"
 #include "motion_model.h"
 #include "validate.h"
@@ -65,19 +67,7 @@ bool save(const SceneDoc& document, const char* filename)
     auto r       = d.to<JsonObject>();
     r["version"] = 1;
     r["id"]      = document.id;
-    // Emit preserved compiler pose targets so a round trip does not drop them. The text is
-    // already valid JSON captured at load time, so deserialize it into the target member
-    // rather than replacing the whole document.
-    if (!document.poses_json.empty()) {
-        const DeserializationError pose_error =
-            deserializeJson(r["poses"], document.poses_json, DeserializationOption::NestingLimit(kMaxJsonNesting));
-        if (pose_error) return false;
-    }
-    if (!document.animations_json.empty()) {
-        const DeserializationError animation_error = deserializeJson(
-            r["animations"], document.animations_json, DeserializationOption::NestingLimit(kMaxJsonNesting));
-        if (animation_error) return false;
-    }
+    writeAnimationDoc(d, document);
     auto bg = r["background"].to<JsonArray>();
     bg.add(document.background.red);
     bg.add(document.background.green);
@@ -438,29 +428,7 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
         return false;
     }
 
-    // Pose targets are compiler-owned for now; keep the raw text so saving the scene
-    // cannot silently discard animation data the firmware depends on.
-    std::string poses_json;
-    if (!root["poses"].isNull()) {
-        if (!root["poses"].is<JsonArrayConst>() && !root["poses"].is<JsonObjectConst>()) {
-            error = file_label + ".poses: must be an array or object";
-            return false;
-        }
-        serializeJson(root["poses"], poses_json);
-    }
-
-    std::string animations_json;
-    if (!root["animations"].isNull()) {
-        if (!root["animations"].is<JsonObjectConst>()) {
-            error = file_label + ".animations: must be an object";
-            return false;
-        }
-        serializeJson(root["animations"], animations_json);
-    }
-
-    candidate.id              = scene_id;
-    candidate.poses_json      = poses_json;
-    candidate.animations_json = animations_json;
+    candidate.id = scene_id;
     for (size_t node_index = 0; node_index < nodes.size(); ++node_index) {
         JsonObjectConst source  = nodes[node_index].as<JsonObjectConst>();
         const std::string where = file_label + ".nodes[" + std::to_string(node_index) + "]";
@@ -595,6 +563,11 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
             node.parent_index = parent_index;
         }
         candidate.nodes[candidate.count++] = node;
+    }
+
+    if (!readAnimations(root["poses"], root["animations"], candidate, candidate.animations, error)) {
+        error = file_label + ": " + error;
+        return false;
     }
 
     // All document invariants (ranges, convexity, hierarchy, sampleability, motion
