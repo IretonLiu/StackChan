@@ -156,6 +156,16 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
 
     add_executable(kiwi_studio
         kiwi_studio.cpp
+        studio/canvas.cpp
+        studio/compiler.cpp
+        studio/document.cpp
+        studio/editor_state.cpp
+        studio/geometry.cpp
+        studio/motion_model.cpp
+        studio/panels.cpp
+        studio/persistence.cpp
+        studio/session.cpp
+        studio/validate.cpp
         ../main/pet/preset/face_motion.cpp
         ../main/pet/shape/circle.cpp
         ../main/pet/shape/shape_path.cpp
