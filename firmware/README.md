@@ -59,43 +59,22 @@ mutations of the template path:
 Available static review poses are `neutral`, `perked`, `twitch`, and `droop`.
 Run `shape_preview --help` for the bounded parameter overrides.
 
-For rapid interactive editing on a desktop, initialise the pinned Dear ImGui
-submodule and build Kiwi Studio, the optional GLFW editor (it is never included in the
-ESP-IDF image):
+Kiwi Studio, the GLFW/Dear ImGui face and animation editor, lives in its own
+repository:
 
 ```bash
-git submodule update --init --recursive
-cmake -S tests -B build-kiwi-studio -DSTACKCHAN_BUILD_KIWI_STUDIO=ON
-cmake --build build-kiwi-studio --target kiwi_studio
-./build-kiwi-studio/kiwi_studio
+git clone --recursive https://github.com/IretonLiu/kiwi-studio.git
 ```
 
-Kiwi Studio is a host-only face-scene composer. It edits ordered circle and
-rounded-polygon nodes, their bounded style/transform controls, and the scene
-background, and parent-linked transforms. Its framed viewport is the physical
-StackChan LCD coordinate space, exactly `320 x 240` design pixels. It saves
-`kiwi-face.petface.json`, exports a matching `kiwi-face.svg`, and can invoke
-the preset compiler to validate its saved scene. Run it from `firmware/` so
-the validation action can find `tools/compile_face_presets.py`. Copy a
-validated JSON scene into `pet_faces/` to compile it into Project Kiwi. The
-shared `pet_faces/pose_contract.json` selects the boot scene. Each scene's
-`animations` section defines its default goal, event routes, finite goal
-durations, compiled keyframe tracks, and procedural sources; the compiler
-rejects invalid or out-of-range animation data. Kiwi Studio preserves animation
-programs on load/save while its timeline editor is still pending. `pet_faces/face_schema.json` is the single source of truth
-for animatable channels, their ranges, preset capacities, and polygon defaults;
-run `python3 tools/generate_face_schema.py` after editing it. The legacy
-`shape_studio` build target remains an alias for `kiwi_studio`.
+It consumes this firmware checkout as a git submodule for the shared shape core,
+face schema, sample scenes and preset compiler. Build, authoring and headless-check
+instructions are in that repository.
 
-Headless checks run from `firmware/` without opening a window:
-
-```bash
-./build-kiwi-studio/kiwi_studio --validate pet_faces/idle.petface.json
-./build-kiwi-studio/kiwi_studio --roundtrip pet_faces/idle.petface.json /tmp/idle-roundtrip.petface.json
-```
-
-`--validate` reports strict load errors and exits non-zero when the scene is rejected.
-`--roundtrip` additionally saves the loaded scene and runs the preset compiler on the result.
+This repo keeps the shared contract: `pet_faces/face_schema.json` is the single
+source of truth for animatable channels, ranges, preset capacities and polygon
+defaults (`python3 tools/generate_face_schema.py` after editing it), and
+`pet_faces/pose_contract.json` selects the boot scene. The compiler validates
+each scene's `poses` and `animations` blocks before emitting the typed header.
 
 On-device consumers append a sampled `ShapePath` with
 `pet::shape::appendToFaceDrawing`; the adapter preserves its commands and
