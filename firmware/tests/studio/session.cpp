@@ -24,17 +24,19 @@ bool saveSession(SceneDoc& document, EditorState& editor)
     return true;
 }
 
-bool loadSession(SceneDoc& document, EditorState& editor)
+bool loadSession(SceneDoc& document, EditorState& editor, const std::string& path)
 {
     std::string error;
-    // load() is transactional: on failure it leaves `document` untouched.
-    if (!load(document, editor.file_path.c_str(), error)) {
+    // load() is transactional: on failure it leaves `document` untouched, so neither the
+    // scene nor `file_path` moves until the new file has been accepted.
+    if (!load(document, path.c_str(), error)) {
         editor.status = error;
         return false;
     }
+    editor.file_path = path;
     editor.selection = document.count == 0 ? -1 : 0;
     editor.dirty     = false;
-    editor.status    = "Loaded " + editor.file_path;
+    editor.status    = "Loaded " + path;
     return true;
 }
 

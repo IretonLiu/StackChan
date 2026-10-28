@@ -16,6 +16,7 @@ enum class Pending { None, New, Reset, Load, Quit };
 struct ToolbarCommands {
     Pending pending         = Pending::None;  // latch: cleared by the loop after the modal
     bool validate_requested = false;          // latch: cleared by the loop after validation
+    bool browse_requested   = false;          // per-frame: open the file browser
     bool replaced           = false;          // per-frame: reset at toolbar entry
 };
 

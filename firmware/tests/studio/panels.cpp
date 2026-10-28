@@ -68,7 +68,8 @@ static bool pointField(const char* label, Vec2& value, Vec2 default_value, float
 
 void toolbar(SceneDoc& document, EditorState& editor, History& history, ToolbarCommands& commands)
 {
-    commands.replaced = false;
+    commands.replaced         = false;
+    commands.browse_requested = false;
     if (ImGui::Button("New")) {
         if (editor.dirty)
             commands.pending = Pending::New;
@@ -91,12 +92,7 @@ void toolbar(SceneDoc& document, EditorState& editor, History& history, ToolbarC
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Load")) {
-        if (editor.dirty)
-            commands.pending = Pending::Load;
-        else if (loadSession(document, editor))
-            commands.replaced = true;
-    }
+    if (ImGui::Button("Load")) commands.browse_requested = true;
     ImGui::SameLine();
     if (ImGui::Button("Save")) saveSession(document, editor);
     ImGui::SameLine();

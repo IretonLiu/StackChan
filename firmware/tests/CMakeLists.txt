@@ -179,6 +179,7 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
         studio/canvas.cpp
         studio/compiler.cpp
         studio/document.cpp
+        studio/file_picker.cpp
         studio/geometry.cpp
         studio/history.cpp
         studio/motion_model.cpp
@@ -222,6 +223,10 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
     set_tests_properties(kiwi_studio_reject_unknown_field PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME kiwi_studio_list_scenes
+        COMMAND $<TARGET_FILE:kiwi_studio> --list-scenes
+                ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces)
+
     add_test(NAME kiwi_studio_corner_growth
         COMMAND $<TARGET_FILE:kiwi_studio> --selftest)
 

@@ -3,6 +3,7 @@
 #include "studio/compiler.h"
 #include "studio/document.h"
 #include "studio/editor_state.h"
+#include "studio/file_picker.h"
 #include "studio/panels.h"
 #include "studio/persistence.h"
 #include "studio/session.h"
@@ -76,6 +77,16 @@ int runCli(int argc, char** argv)
         return failures == 0 ? 0 : 2;
     }
     if (argc < 3) return -1;
+    if (mode == "--list-scenes") {
+        std::vector<FilePickerEntry> entries;
+        std::string error;
+        if (!listSceneDirectory(argv[2], entries, error)) {
+            fprintf(stderr, "kiwi_studio: %s\n", error.c_str());
+            return 2;
+        }
+        for (const FilePickerEntry& entry : entries) printf("%s%s\n", entry.name.c_str(), entry.directory ? "/" : "");
+        return 0;
+    }
     if (mode != "--validate" && mode != "--roundtrip" && mode != "--export-svg") return -1;
     SceneDoc document;
     std::string error;
@@ -131,6 +142,8 @@ int main(int argc, char** argv)
     SceneDoc transaction_start;
     bool transaction_active = false;
     ToolbarCommands commands;
+    FilePicker picker;
+    std::string pending_load_path;
     bool pending_modal_open    = false;
     bool validation_failed     = false;
     bool validation_modal_open = false;
@@ -232,6 +245,22 @@ int main(int argc, char** argv)
         ImGui::EndChild();
 
         if (changed) editor.dirty = true;
+
+        if (commands.browse_requested) {
+            commands.browse_requested = false;
+            openFilePicker(picker, editor.file_path);
+        }
+        const std::string picked = drawFilePicker(picker);
+        if (!picked.empty()) {
+            if (editor.dirty) {
+                pending_load_path = picked;
+                commands.pending  = Pending::Load;
+            } else if (loadSession(document, editor, picked)) {
+                history.clear();
+                transaction_active = false;
+            }
+        }
+
         if (commands.validate_requested) {
             commands.validate_requested = false;
             const bool saved            = !editor.dirty || saveSession(document, editor);
@@ -270,7 +299,7 @@ int main(int argc, char** argv)
                     editor.selection = 0;
                     replaced_action  = true;
                 } else if (action == Pending::Load) {
-                    replaced_action = loadSession(document, editor);
+                    replaced_action = loadSession(document, editor, pending_load_path);
                 } else if (action == Pending::Quit) {
                     running = false;
                 }

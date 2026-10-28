@@ -12,7 +12,7 @@ namespace kiwi::studio {
 /** Validates then writes the document; updates status/dirty. */
 bool saveSession(SceneDoc& document, EditorState& editor);
 
-/** Loads into a scratch document and commits only on success; resets selection. */
-bool loadSession(SceneDoc& document, EditorState& editor);
+/** Loads `path`; commits the document and file_path only on success, resets selection. */
+bool loadSession(SceneDoc& document, EditorState& editor, const std::string& path);
 
 }  // namespace kiwi::studio
