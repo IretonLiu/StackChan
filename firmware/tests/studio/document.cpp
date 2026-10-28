@@ -14,11 +14,22 @@ using namespace pet::shape;
 
 }  // namespace
 
-Node makeNode(Kind kind, int number)
+int uniqueNodeNumber(const SceneDoc& document, Kind kind)
+{
+    const std::string prefix = kind == Kind::Circle ? "circle-" : "polygon-";
+    for (int number = 1;; ++number) {
+        const std::string candidate = prefix + std::to_string(number);
+        bool used                   = false;
+        for (size_t index = 0; index < document.count; ++index) used |= document.nodes[index].id == candidate;
+        if (!used) return number;
+    }
+}
+
+Node makeNode(const SceneDoc& document, Kind kind)
 {
     Node node;
-    node.id                   = (kind == Kind::Circle ? "circle-" : "polygon-") + std::to_string(number);
-    node.kind                 = kind;
+    node.id   = (kind == Kind::Circle ? "circle-" : "polygon-") + std::to_string(uniqueNodeNumber(document, kind));
+    node.kind = kind;
     node.polygon.vertex_count = 3;
     node.polygon.vertices     = {{{-30, 20}, {0, -35}, {30, 20}}};
     return node;
@@ -27,15 +38,18 @@ Node makeNode(Kind kind, int number)
 void resetScene(SceneDoc& document)
 {
     document                                = {};
-    document.nodes[0]                       = makeNode(Kind::Polygon, 1);
+    document.nodes[0]                       = makeNode(document, Kind::Polygon);
     document.nodes[0].transform.translation = {108, 78};
-    document.nodes[1]                       = makeNode(Kind::Polygon, 2);
+    ++document.count;
+    document.nodes[1]                       = makeNode(document, Kind::Polygon);
     document.nodes[1].transform.translation = {212, 78};
-    document.nodes[2]                       = makeNode(Kind::Circle, 1);
-    document.nodes[2].circle                = {{118, 138}, 12};
-    document.nodes[3]                       = makeNode(Kind::Circle, 2);
-    document.nodes[3].circle                = {{202, 138}, 12};
-    document.count                          = 4;
+    ++document.count;
+    document.nodes[2]        = makeNode(document, Kind::Circle);
+    document.nodes[2].circle = {{118, 138}, 12};
+    ++document.count;
+    document.nodes[3]        = makeNode(document, Kind::Circle);
+    document.nodes[3].circle = {{202, 138}, 12};
+    ++document.count;
 }
 
 void clearScene(SceneDoc& document)

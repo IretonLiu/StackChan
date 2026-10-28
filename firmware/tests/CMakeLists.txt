@@ -159,8 +159,8 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
         studio/canvas.cpp
         studio/compiler.cpp
         studio/document.cpp
-        studio/editor_state.cpp
         studio/geometry.cpp
+        studio/history.cpp
         studio/motion_model.cpp
         studio/panels.cpp
         studio/persistence.cpp

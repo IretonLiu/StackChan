@@ -5,13 +5,12 @@
 // only the document, so undo/redo can never resurrect status text, file paths or a
 // previous selection.
 
+#include "history.h"
 #include "types.h"
 
 #include <imgui.h>
 
-#include <array>
 #include <string>
-#include <deque>
 
 namespace kiwi::studio {
 
@@ -44,32 +43,6 @@ struct EditorState {
     std::string file_path{"kiwi-face.petface.json"};
     std::string status;
     bool dirty = false;
-};
-
-/**
- * Bounded undo/redo over the document only. Recording a snapshot clears the redo stack.
- */
-class History {
-public:
-    static constexpr size_t kMaxEntries = 64;
-
-    void record(const SceneDoc& document);
-    bool undo(SceneDoc& document);
-    bool redo(SceneDoc& document);
-    void clear();
-
-    bool canUndo() const
-    {
-        return !_undo.empty();
-    }
-    bool canRedo() const
-    {
-        return !_redo.empty();
-    }
-
-private:
-    std::deque<SceneDoc> _undo;
-    std::deque<SceneDoc> _redo;
 };
 
 }  // namespace kiwi::studio

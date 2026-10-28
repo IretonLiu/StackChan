@@ -12,8 +12,14 @@ namespace kiwi::studio {
 
 enum class Pending { None, New, Reset, Load, Quit };
 
-void toolbar(SceneDoc& document, EditorState& editor, History& history, Pending& pending, bool& validate_requested,
-             bool& replaced);
+/** Values the toolbar produces for the frame/app loop to act on. */
+struct ToolbarCommands {
+    Pending pending         = Pending::None;  // latch: cleared by the loop after the modal
+    bool validate_requested = false;          // latch: cleared by the loop after validation
+    bool replaced           = false;          // per-frame: reset at toolbar entry
+};
+
+void toolbar(SceneDoc& document, EditorState& editor, History& history, ToolbarCommands& commands);
 
 bool scenePanel(SceneDoc& document, EditorState& editor);
 

@@ -14,6 +14,10 @@ MAX_POSE_TARGETS = 32
 MAX_CXX_FLOAT = 3.4028234663852886e38
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
 
+# Node motion channels that only apply to one primitive kind (mirrors the studio's
+# motionPropertyApplies table).
+MOTION_PROPERTY_KIND = {6: "circle", 7: "rounded_polygon", 8: "rounded_polygon"}
+
 # channel: (generated enum name, required primitive kind, requires element index, minimum, maximum)
 POSE_CHANNELS = {
     "transform.translation_x": ("TransformTranslationX", None, False, -4096, 4096),
@@ -316,6 +320,10 @@ def parse_scene(path):
             if node["circle"][1] <= 0: fail(where + ".circle.radius", "must be positive")
         else: node["polygon"] = parse_polygon(raw.get("rounded_polygon"), where + ".rounded_polygon")
         node["motion"] = parse_motion(raw.get("motion"), where + ".motion")
+        if node["motion"] is not None:
+            required_kind = MOTION_PROPERTY_KIND.get(node["motion"]["property"])
+            if required_kind is not None and required_kind != node["kind"]:
+                fail(where + ".motion.property", "does not apply to this node kind")
         parsed.append(node)
     poses = parse_poses(value.get("poses"), parsed, str(path) + ".poses")
     return {"id": scene_id, "background": color(value.get("background"), str(path) + ".background"), "nodes": parsed, "poses": poses}

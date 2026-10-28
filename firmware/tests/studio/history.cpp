@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT */
-#include "editor_state.h"
+#include "history.h"
 
 namespace kiwi::studio {
 

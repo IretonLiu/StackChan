@@ -10,7 +10,9 @@
 
 namespace kiwi::studio {
 
-Node makeNode(Kind kind, int number);
+int uniqueNodeNumber(const SceneDoc& document, Kind kind);
+
+Node makeNode(const SceneDoc& document, Kind kind);
 
 /** Builds the default four-node cat scene. */
 void resetScene(SceneDoc& document);

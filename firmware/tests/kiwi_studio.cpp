@@ -78,10 +78,9 @@ int main(int argc, char** argv)
     EditorState editor;
     History history;
     SceneDoc transaction_start;
-    bool transaction_active    = false;
-    Pending pending            = Pending::None;
+    bool transaction_active = false;
+    ToolbarCommands commands;
     bool pending_modal_open    = false;
-    bool validate_requested    = false;
     bool validation_failed     = false;
     bool validation_modal_open = false;
     std::string validation_log;
@@ -92,7 +91,7 @@ int main(int argc, char** argv)
         if (glfwWindowShouldClose(w)) {
             glfwSetWindowShouldClose(w, GLFW_FALSE);
             if (editor.dirty) {
-                if (pending == Pending::None) pending = Pending::Quit;
+                if (commands.pending == Pending::None) commands.pending = Pending::Quit;
             } else {
                 running = false;
                 break;
@@ -154,10 +153,9 @@ int main(int argc, char** argv)
             }
         }
         ImGui::Text("Kiwi Studio — %s%s", editor.file_path.c_str(), editor.dirty ? " *" : "");
-        bool changed  = shortcut_changed;
-        bool replaced = false;
-        toolbar(document, editor, history, pending, validate_requested, replaced);
-        if (replaced) {
+        bool changed = shortcut_changed;
+        toolbar(document, editor, history, commands);
+        if (commands.replaced) {
             history.clear();
             transaction_active = false;
             editor.dirty       = false;
@@ -183,9 +181,9 @@ int main(int argc, char** argv)
         ImGui::EndChild();
 
         if (changed) editor.dirty = true;
-        if (validate_requested) {
-            validate_requested = false;
-            const bool saved   = !editor.dirty || saveSession(document, editor);
+        if (commands.validate_requested) {
+            commands.validate_requested = false;
+            const bool saved            = !editor.dirty || saveSession(document, editor);
             if (saved) {
                 const CompilerResult result = runPresetCompiler(editor.file_path);
                 if (result.ok) {
@@ -201,15 +199,15 @@ int main(int argc, char** argv)
 
         if (!editor.status.empty()) ImGui::TextWrapped("%s", editor.status.c_str());
 
-        if (pending != Pending::None && !pending_modal_open) {
+        if (commands.pending != Pending::None && !pending_modal_open) {
             ImGui::OpenPopup("Discard unsaved changes?");
             pending_modal_open = true;
         }
         if (ImGui::BeginPopupModal("Discard unsaved changes?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::TextUnformatted("The current scene has unsaved changes.");
             if (ImGui::Button("Discard")) {
-                const Pending action = pending;
-                pending              = Pending::None;
+                const Pending action = commands.pending;
+                commands.pending     = Pending::None;
                 pending_modal_open   = false;
                 bool replaced_action = false;
                 if (action == Pending::New) {
@@ -234,13 +232,13 @@ int main(int argc, char** argv)
             }
             ImGui::SameLine();
             if (ImGui::Button("Cancel")) {
-                pending            = Pending::None;
+                commands.pending   = Pending::None;
                 pending_modal_open = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
-        } else if (pending != Pending::None && !ImGui::IsPopupOpen("Discard unsaved changes?")) {
-            pending            = Pending::None;
+        } else if (commands.pending != Pending::None && !ImGui::IsPopupOpen("Discard unsaved changes?")) {
+            commands.pending   = Pending::None;
             pending_modal_open = false;
         }
 

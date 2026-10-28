@@ -222,14 +222,14 @@ bool readStyle(JsonVariantConst value, PathStyle& style, std::string& error, con
         return false;
     }
     if (!object["opacity"].isNull()) {
-        if (!readNumber(object["opacity"], style.opacity) || style.opacity < 0.0f || style.opacity > 1.0f) {
-            error = where + ".opacity: must be a finite number in [0, 1]";
+        if (!readNumber(object["opacity"], style.opacity)) {
+            error = where + ".opacity: must be a finite number";
             return false;
         }
     }
     if (!object["stroke_width"].isNull()) {
-        if (!readNumber(object["stroke_width"], style.stroke_width) || style.stroke_width < 0.0f) {
-            error = where + ".stroke_width: must be a finite non-negative number";
+        if (!readNumber(object["stroke_width"], style.stroke_width)) {
+            error = where + ".stroke_width: must be a finite number";
             return false;
         }
     }
@@ -269,10 +269,6 @@ bool readTransform(JsonVariantConst value, Transform2D& transform, std::string& 
     }
     if (!object["scale"].isNull() && !readPoint(object["scale"], transform.scale)) {
         error = where + ".scale: must be a two-number array";
-        return false;
-    }
-    if (transform.scale.x == 0.0f || transform.scale.y == 0.0f) {
-        error = where + ".scale: components must be non-zero";
         return false;
     }
     if (!object["pivot"].isNull() && !readPoint(object["pivot"], transform.pivot)) {
@@ -488,8 +484,8 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
                 error = where + ".circle.center: must be a two-number array";
                 return false;
             }
-            if (!readNumber(circle["radius"], node.circle.radius) || node.circle.radius <= 0.0f) {
-                error = where + ".circle.radius: must be a finite positive number";
+            if (!readNumber(circle["radius"], node.circle.radius)) {
+                error = where + ".circle.radius: must be a finite number";
                 return false;
             }
         } else if (std::string(kind) == "rounded_polygon") {
@@ -531,20 +527,15 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
                 }
                 JsonObjectConst corner = corners[index].as<JsonObjectConst>();
                 if (!rejectUnknown(corner, {"roundness", "cap_tension"}, error, corner_where)) return false;
-                if (!corner["roundness"].isNull()) {
-                    if (!readNumber(corner["roundness"], node.polygon.corners[index].roundness) ||
-                        node.polygon.corners[index].roundness < 0.0f || node.polygon.corners[index].roundness > .35f) {
-                        error = corner_where + ".roundness: must be a finite number in [0, 0.35]";
-                        return false;
-                    }
+                if (!corner["roundness"].isNull() &&
+                    !readNumber(corner["roundness"], node.polygon.corners[index].roundness)) {
+                    error = corner_where + ".roundness: must be a finite number";
+                    return false;
                 }
-                if (!corner["cap_tension"].isNull()) {
-                    if (!readNumber(corner["cap_tension"], node.polygon.corners[index].cap_tension) ||
-                        node.polygon.corners[index].cap_tension < .10f ||
-                        node.polygon.corners[index].cap_tension > .90f) {
-                        error = corner_where + ".cap_tension: must be a finite number in [0.10, 0.90]";
-                        return false;
-                    }
+                if (!corner["cap_tension"].isNull() &&
+                    !readNumber(corner["cap_tension"], node.polygon.corners[index].cap_tension)) {
+                    error = corner_where + ".cap_tension: must be a finite number";
+                    return false;
                 }
                 const std::string edge_where = where + ".rounded_polygon.edges[" + std::to_string(index) + "]";
                 if (!edges[index].is<JsonObjectConst>()) {
@@ -553,42 +544,16 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
                 }
                 JsonObjectConst edge = edges[index].as<JsonObjectConst>();
                 if (!rejectUnknown(edge, {"bulge", "start", "end"}, error, edge_where)) return false;
-                if (!edge["bulge"].isNull()) {
-                    if (!readNumber(edge["bulge"], node.polygon.edges[index].bulge) ||
-                        node.polygon.edges[index].bulge < -.35f || node.polygon.edges[index].bulge > .35f) {
-                        error = edge_where + ".bulge: must be a finite number in [-0.35, 0.35]";
-                        return false;
-                    }
-                }
-                if (!edge["start"].isNull()) {
-                    if (!readNumber(edge["start"], node.polygon.edges[index].start) ||
-                        node.polygon.edges[index].start < .08f || node.polygon.edges[index].start > .45f) {
-                        error = edge_where + ".start: must be a finite number in [0.08, 0.45]";
-                        return false;
-                    }
-                }
-                if (!edge["end"].isNull()) {
-                    if (!readNumber(edge["end"], node.polygon.edges[index].end) ||
-                        node.polygon.edges[index].end < .08f || node.polygon.edges[index].end > .45f) {
-                        error = edge_where + ".end: must be a finite number in [0.08, 0.45]";
-                        return false;
-                    }
-                }
-            }
-            const auto& vertices_out   = node.polygon.vertices;
-            const uint8_t vertex_count = node.polygon.vertex_count;
-            float first_turn           = 0.0f;
-            for (uint8_t index = 0; index < vertex_count; ++index) {
-                const float turn = cross(vertices_out[(index + vertex_count - 1) % vertex_count], vertices_out[index],
-                                         vertices_out[(index + 1) % vertex_count]);
-                if (std::fabs(turn) < .0001f) {
-                    error = where + ".rounded_polygon.vertices: must be non-degenerate";
+                if (!edge["bulge"].isNull() && !readNumber(edge["bulge"], node.polygon.edges[index].bulge)) {
+                    error = edge_where + ".bulge: must be a finite number";
                     return false;
                 }
-                if (index == 0)
-                    first_turn = turn;
-                else if (first_turn * turn <= 0.0f) {
-                    error = where + ".rounded_polygon.vertices: must be convex with consistent winding";
+                if (!edge["start"].isNull() && !readNumber(edge["start"], node.polygon.edges[index].start)) {
+                    error = edge_where + ".start: must be a finite number";
+                    return false;
+                }
+                if (!edge["end"].isNull() && !readNumber(edge["end"], node.polygon.edges[index].end)) {
+                    error = edge_where + ".end: must be a finite number";
                     return false;
                 }
             }
@@ -620,17 +585,12 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
         candidate.nodes[candidate.count++] = node;
     }
 
-    std::array<Affine2D, kMaxNodes> worlds{};
-    if (!resolveWorlds(candidate, worlds)) {
-        error = file_label + ": invalid parent hierarchy";
+    // All document invariants (ranges, convexity, hierarchy, sampleability, motion
+    // applicability) are owned by validateScene(); load only parses JSON shape here.
+    Problem problem;
+    if (!validateScene(candidate, problem)) {
+        error = file_label + ": " + problem.formatted();
         return false;
-    }
-    for (size_t index = 0; index < candidate.count; ++index) {
-        const char* problem = shapeProblem(candidate.nodes[index], worlds[index]);
-        if (problem != nullptr) {
-            error = file_label + ".nodes[" + std::to_string(index) + "]: " + problem;
-            return false;
-        }
     }
 
     out_document = candidate;

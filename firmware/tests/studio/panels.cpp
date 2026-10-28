@@ -66,41 +66,41 @@ static bool pointField(const char* label, Vec2& value, Vec2 default_value, float
     return changed;
 }
 
-void toolbar(SceneDoc& document, EditorState& editor, History& history, Pending& pending, bool& validate_requested,
-             bool& replaced)
+void toolbar(SceneDoc& document, EditorState& editor, History& history, ToolbarCommands& commands)
 {
+    commands.replaced = false;
     if (ImGui::Button("New")) {
         if (editor.dirty)
-            pending = Pending::New;
+            commands.pending = Pending::New;
         else {
             clearScene(document);
-            editor.selection = -1;
-            editor.dirty     = false;
-            replaced         = true;
+            editor.selection  = -1;
+            editor.dirty      = false;
+            commands.replaced = true;
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset")) {
         if (editor.dirty)
-            pending = Pending::Reset;
+            commands.pending = Pending::Reset;
         else {
             resetScene(document);
-            editor.selection = 0;
-            editor.dirty     = false;
-            replaced         = true;
+            editor.selection  = 0;
+            editor.dirty      = false;
+            commands.replaced = true;
         }
     }
     ImGui::SameLine();
     if (ImGui::Button("Load")) {
         if (editor.dirty)
-            pending = Pending::Load;
+            commands.pending = Pending::Load;
         else if (loadSession(document, editor))
-            replaced = true;
+            commands.replaced = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Save")) saveSession(document, editor);
     ImGui::SameLine();
-    if (ImGui::Button("Validate")) validate_requested = true;
+    if (ImGui::Button("Validate")) commands.validate_requested = true;
     ImGui::SameLine();
     if (ImGui::Button("Export SVG"))
         editor.status = exportSvg(document, "kiwi-face.svg") ? "Wrote kiwi-face.svg at StackChan LCD dimensions"
@@ -159,13 +159,13 @@ bool scenePanel(SceneDoc& document, EditorState& editor)
 
     ImGui::SeparatorText("Nodes");
     if (ImGui::Button("Add circle") && document.count < kMaxNodes) {
-        document.nodes[document.count] = makeNode(Kind::Circle, int(document.count) + 1);
+        document.nodes[document.count] = makeNode(document, Kind::Circle);
         editor.selection               = int(document.count++);
         changed                        = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Add polygon") && document.count < kMaxNodes) {
-        document.nodes[document.count] = makeNode(Kind::Polygon, int(document.count) + 1);
+        document.nodes[document.count] = makeNode(document, Kind::Polygon);
         editor.selection               = int(document.count++);
         changed                        = true;
     }
