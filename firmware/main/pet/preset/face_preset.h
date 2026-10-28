@@ -18,6 +18,7 @@ enum class ShapeKind : uint8_t {
 };
 
 struct FacePoseDefinition;
+struct FaceAnimationGoalDefinition;
 
 /** Host-compiled data only: firmware never parses JSON scene source. */
 struct FacePresetNodeDefinition {
@@ -40,6 +41,9 @@ struct FacePresetDefinition {
     // Optional typed pose table; definitions live in face_pose_engine.h.
     const FacePoseDefinition* poses = nullptr;
     uint8_t pose_count              = 0;
+    const FaceAnimationGoalDefinition* animation_goals = nullptr;
+    uint8_t animation_goal_count                       = 0;
+    const char* default_animation_goal_id              = nullptr;
 };
 
 }  // namespace pet::preset

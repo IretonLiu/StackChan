@@ -12,10 +12,6 @@
 
 namespace pet::shape {
 
-// Move + one edge cubic and one corner cubic per vertex + Close must fit in
-// ShapePath. Raise the shared path capacity deliberately before raising this.
-constexpr size_t kMaxRoundedPolygonVertices = 5;
-
 /**
  * Canonical local-space source geometry for a convex rounded polygon. The
  * directed edge at index i runs from vertex i to vertex (i + 1) % count.
@@ -58,7 +54,7 @@ struct RoundedPolygonSample {
     std::array<RoundedPolygonEdgeGeometry, kMaxRoundedPolygonVertices> edges{};
     std::array<RoundedPolygonCornerGeometry, kMaxRoundedPolygonVertices> corners{};
     RoundedPolygonParameters parameters{};
-    bool parameters_were_clamped = false;
+    bool parameters_were_clamped    = false;
     RoundedPolygonSampleError error = RoundedPolygonSampleError::None;
 };
 

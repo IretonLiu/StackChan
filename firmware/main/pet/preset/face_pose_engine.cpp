@@ -4,14 +4,16 @@
 #include "face_pose_engine.h"
 
 #include <cmath>
+#include <type_traits>
 
 namespace pet::preset {
 namespace {
 
-constexpr MotionResponseRange kCoordinateRange{-4096.0f, 4096.0f};
-constexpr MotionResponseRange kRotationRange{-3600.0f, 3600.0f};
-constexpr MotionResponseRange kScaleRange{0.01f, 16.0f};
-constexpr MotionResponseRange kRadiusRange{0.01f, 4096.0f};
+constexpr MotionResponseRange kCoordinateRange{kCoordinateMinimum, kCoordinateMaximum};
+constexpr MotionResponseRange kRotationRange{kRotationMinimum, kRotationMaximum};
+constexpr MotionResponseRange kScaleRange{kScaleMinimum, kScaleMaximum};
+constexpr MotionResponseRange kRadiusRange{kRadiusMinimum, kRadiusMaximum};
+constexpr float kPoseChangeEpsilon = 0.001f;
 
 bool finite(float value)
 {
@@ -24,11 +26,19 @@ bool sameChannel(const FacePoseRuntimeTarget& runtime, const FacePoseTargetDefin
            runtime.element_index == definition.element_index;
 }
 
-bool locateChannel(FacePresetEvaluation& evaluation, uint8_t node_index, FacePoseChannel channel, uint8_t element_index,
-                   float*& value, MotionResponseRange& range)
+bool polygonElementValid(const FacePresetNodeDefinition& node, uint8_t element_index)
+{
+    return node.kind == ShapeKind::RoundedPolygon && element_index < node.rounded_polygon.vertex_count &&
+           element_index < shape::kMaxRoundedPolygonVertices;
+}
+
+template <typename Evaluation>
+bool locateChannelImpl(Evaluation& evaluation, uint8_t node_index, FacePoseChannel channel, uint8_t element_index,
+                       std::conditional_t<std::is_const_v<Evaluation>, const float*, float*>& value,
+                       MotionResponseRange& range)
 {
     if (node_index >= evaluation.node_count) return false;
-    FacePresetNodeDefinition& node = evaluation.nodes[node_index];
+    auto& node = evaluation.nodes[node_index];
     switch (channel) {
         case FacePoseChannel::TransformTranslationX:
             if (element_index != 0) return false;
@@ -71,49 +81,54 @@ bool locateChannel(FacePresetEvaluation& evaluation, uint8_t node_index, FacePos
             range = kRadiusRange;
             return true;
         case FacePoseChannel::PolygonVertexX:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.vertices[element_index].x;
             range = kCoordinateRange;
             return true;
         case FacePoseChannel::PolygonVertexY:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.vertices[element_index].y;
             range = kCoordinateRange;
             return true;
         case FacePoseChannel::PolygonCornerRoundness:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.corners[element_index].roundness;
             range = {shape::kMinCornerRoundness, shape::kMaxCornerRoundness};
             return true;
         case FacePoseChannel::PolygonCornerCapTension:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.corners[element_index].cap_tension;
             range = {shape::kMinCapTension, shape::kMaxCapTension};
             return true;
         case FacePoseChannel::PolygonEdgeBulge:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.edges[element_index].bulge;
             range = {-shape::kMaxEdgeBulge, shape::kMaxEdgeBulge};
             return true;
         case FacePoseChannel::PolygonEdgeStart:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.edges[element_index].start;
             range = {shape::kMinEdgeHandle, shape::kMaxEdgeHandle};
             return true;
         case FacePoseChannel::PolygonEdgeEnd:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
-                return false;
+            if (!polygonElementValid(node, element_index)) return false;
             value = &node.rounded_polygon.edges[element_index].end;
             range = {shape::kMinEdgeHandle, shape::kMaxEdgeHandle};
             return true;
     }
     return false;
+}
+
+bool locateChannel(FacePresetEvaluation& evaluation, uint8_t node_index, FacePoseChannel channel, uint8_t element_index,
+                   float*& value, MotionResponseRange& range)
+{
+    return locateChannelImpl(evaluation, node_index, channel, element_index, value, range);
+}
+
+bool locateChannel(const FacePresetEvaluation& evaluation, uint8_t node_index, FacePoseChannel channel,
+                   uint8_t element_index, const float*& value, MotionResponseRange& range)
+{
+    return locateChannelImpl(evaluation, node_index, channel, element_index, value, range);
 }
 
 bool contains(MotionResponseRange range, float value)
@@ -130,6 +145,15 @@ bool validGeometry(const FacePresetEvaluation& evaluation)
         if (!shape::sampleRoundedPolygon(node.rounded_polygon, {}, sample, node.style)) return false;
     }
     return true;
+}
+
+void removeTarget(FacePoseRuntime& runtime, uint8_t index)
+{
+    for (uint8_t next = index; next + 1 < runtime.target_count; ++next) {
+        runtime.targets[next] = runtime.targets[next + 1];
+    }
+    --runtime.target_count;
+    runtime.targets[runtime.target_count] = {};
 }
 
 }  // namespace
@@ -152,16 +176,14 @@ bool selectFacePose(const FacePresetDefinition& preset, std::string_view pose_id
         (pose->target_count > 0 && pose->targets == nullptr))
         return false;
 
-    FacePresetEvaluation base_copy = base;
     FacePoseRuntime result{};
     result.response_function = runtime.response_function;
     if (result.response_function == nullptr) return false;
     for (uint8_t index = 0; index < pose->target_count; ++index) {
         const FacePoseTargetDefinition& definition = pose->targets[index];
-        float* current                             = nullptr;
+        const float* current                       = nullptr;
         MotionResponseRange range;
-        if (!locateChannel(base_copy, definition.node_index, definition.channel, definition.element_index, current,
-                           range) ||
+        if (!locateChannel(base, definition.node_index, definition.channel, definition.element_index, current, range) ||
             !contains(range, definition.value) || !validMotionResponseProfile(definition.response))
             return false;
 
@@ -184,8 +206,9 @@ bool selectFacePose(const FacePresetDefinition& preset, std::string_view pose_id
     return true;
 }
 
-bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEvaluation& evaluation)
+bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEvaluation& evaluation, bool* changed)
 {
+    if (changed != nullptr) *changed = false;
     if (runtime.target_count > kMaxFacePoseTargets || runtime.response_function == nullptr || !finite(delta_seconds) ||
         delta_seconds < 0.0f)
         return false;
@@ -202,6 +225,7 @@ bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEv
     std::array<MotionResponseState, kMaxFacePoseTargets> saved_states{};
     uint8_t saved_count = 0;
     bool failed         = false;
+    bool pose_changed   = false;
 
     for (uint8_t index = 0; index < runtime.target_count; ++index) {
         FacePoseRuntimeTarget& target = runtime.targets[index];
@@ -213,6 +237,7 @@ bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEv
             failed = true;
             break;
         }
+        const float previous_value  = target.state.value;
         saved[saved_count].location = destination;
         saved[saved_count].original = *destination;
         saved_states[saved_count]   = target.state;
@@ -223,20 +248,78 @@ bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEv
             break;
         }
         *destination = target.state.value;
+        if (std::fabs(target.state.value - previous_value) > kPoseChangeEpsilon) pose_changed = true;
     }
 
-    if (!failed && !validGeometry(evaluation)) failed = true;
+    // A settled pose cannot become invalid without a channel moving; skip the extra
+    // polygon sampling pass on frames that only reapply the current state.
+    if (!failed && pose_changed && !validGeometry(evaluation)) failed = true;
+    if (!failed) {
+        if (changed != nullptr) *changed = pose_changed;
+        return true;
+    }
 
-    if (failed) {
-        // Unwind in reverse so repeated targets on the same channel restore the
-        // original value rather than an intermediate one.
-        for (uint8_t index = saved_count; index > 0; --index) {
-            *saved[index - 1].location       = saved[index - 1].original;
-            runtime.targets[index - 1].state = saved_states[index - 1];
+    // Unwind in reverse so repeated targets on the same channel restore the
+    // original value rather than an intermediate one.
+    for (uint8_t index = saved_count; index > 0; --index) {
+        *saved[index - 1].location       = saved[index - 1].original;
+        runtime.targets[index - 1].state = saved_states[index - 1];
+    }
+
+    // A transition rejected only because of an invalid intermediate state must not
+    // retry the same step forever. Reapply targets one at a time and settle just the
+    // target that cannot advance or that makes the geometry invalid; the remaining
+    // channels keep animating and the next frame can render a valid pose.
+    bool degraded = false;
+    pose_changed  = false;
+    for (uint8_t index = 0; index < runtime.target_count;) {
+        FacePoseRuntimeTarget& target = runtime.targets[index];
+        float* destination            = nullptr;
+        MotionResponseRange range;
+        if (!locateChannel(evaluation, target.node_index, target.channel, target.element_index, destination, range) ||
+            !validMotionResponseProfile(target.response) || !finite(target.state.value) ||
+            !finite(target.state.velocity)) {
+            removeTarget(runtime, index);
+            degraded = true;
+            continue;
         }
-        return false;
+
+        const float base_value     = *destination;
+        const float previous_value = target.state.value;
+        if (!advanceMotionResponse(target.state, target.target, delta_seconds, range, target.response,
+                                   runtime.response_function)) {
+            target.target = previous_value;
+            target.state  = {previous_value, 0.0f};
+            *destination  = previous_value;
+            if (!validGeometry(evaluation)) {
+                *destination  = base_value;
+                target.target = base_value;
+                target.state  = {base_value, 0.0f};
+            }
+            degraded = true;
+            ++index;
+            continue;
+        }
+
+        *destination = target.state.value;
+        if (!validGeometry(evaluation)) {
+            *destination  = previous_value;
+            target.target = previous_value;
+            target.state  = {previous_value, 0.0f};
+            if (!validGeometry(evaluation)) {
+                *destination  = base_value;
+                target.target = base_value;
+                target.state  = {base_value, 0.0f};
+            }
+            degraded = true;
+        } else if (std::fabs(target.state.value - previous_value) > kPoseChangeEpsilon) {
+            pose_changed = true;
+        }
+        ++index;
     }
-    return true;
+
+    if (changed != nullptr) *changed = pose_changed;
+    return !degraded;
 }
 
 }  // namespace pet::preset

@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "limits": {
+    "max_nodes": 16,
+    "max_polygon_vertices": 5,
+    "max_poses": 8,
+    "max_pose_targets": 32,
+    "max_animation_goals": 8,
+    "max_motion_programs": 8,
+    "max_motion_tracks": 16,
+    "max_motion_keyframes": 8
+  },
+  "ranges": {
+    "coordinate": {
+      "minimum": -4096,
+      "maximum": 4096
+    },
+    "rotation_degrees": {
+      "minimum": -3600,
+      "maximum": 3600
+    },
+    "scale": {
+      "minimum": 0.01,
+      "maximum": 16
+    },
+    "circle_radius": {
+      "minimum": 0.01,
+      "maximum": 4096
+    },
+    "corner_roundness": {
+      "minimum": 0,
+      "maximum": 0.35
+    },
+    "corner_cap_tension": {
+      "minimum": 0.1,
+      "maximum": 0.9
+    },
+    "edge_bulge": {
+      "minimum": -0.35,
+      "maximum": 0.35
+    },
+    "edge_handle": {
+      "minimum": 0.08,
+      "maximum": 0.45
+    }
+  },
+  "defaults": {
+    "corner_roundness": 0.08,
+    "corner_cap_tension": 0.55,
+    "edge_bulge": 0,
+    "edge_handle": 0.28
+  },
+  "channels": [
+    {
+      "id": "transform.translation_x",
+      "enum": "TransformTranslationX",
+      "kind": null,
+      "element": false,
+      "range": "coordinate"
+    },
+    {
+      "id": "transform.translation_y",
+      "enum": "TransformTranslationY",
+      "kind": null,
+      "element": false,
+      "range": "coordinate"
+    },
+    {
+      "id": "transform.rotation_degrees",
+      "enum": "TransformRotationDegrees",
+      "kind": null,
+      "element": false,
+      "range": "rotation_degrees"
+    },
+    {
+      "id": "transform.scale_x",
+      "enum": "TransformScaleX",
+      "kind": null,
+      "element": false,
+      "range": "scale"
+    },
+    {
+      "id": "transform.scale_y",
+      "enum": "TransformScaleY",
+      "kind": null,
+      "element": false,
+      "range": "scale"
+    },
+    {
+      "id": "circle.center_x",
+      "enum": "CircleCenterX",
+      "kind": "circle",
+      "element": false,
+      "range": "coordinate"
+    },
+    {
+      "id": "circle.center_y",
+      "enum": "CircleCenterY",
+      "kind": "circle",
+      "element": false,
+      "range": "coordinate"
+    },
+    {
+      "id": "circle.radius",
+      "enum": "CircleRadius",
+      "kind": "circle",
+      "element": false,
+      "range": "circle_radius"
+    },
+    {
+      "id": "rounded_polygon.vertex_x",
+      "enum": "PolygonVertexX",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "coordinate"
+    },
+    {
+      "id": "rounded_polygon.vertex_y",
+      "enum": "PolygonVertexY",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "coordinate"
+    },
+    {
+      "id": "rounded_polygon.corner_roundness",
+      "enum": "PolygonCornerRoundness",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "corner_roundness"
+    },
+    {
+      "id": "rounded_polygon.corner_cap_tension",
+      "enum": "PolygonCornerCapTension",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "corner_cap_tension"
+    },
+    {
+      "id": "rounded_polygon.edge_bulge",
+      "enum": "PolygonEdgeBulge",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "edge_bulge"
+    },
+    {
+      "id": "rounded_polygon.edge_start",
+      "enum": "PolygonEdgeStart",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "edge_handle"
+    },
+    {
+      "id": "rounded_polygon.edge_end",
+      "enum": "PolygonEdgeEnd",
+      "kind": "rounded_polygon",
+      "element": true,
+      "range": "edge_handle"
+    }
+  ]
+}

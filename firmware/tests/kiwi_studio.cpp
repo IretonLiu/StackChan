@@ -67,6 +67,9 @@ struct Scene {
     // authored in the studio yet. They are preserved verbatim so a load/save round trip
     // cannot silently drop animation data the firmware depends on.
     std::string poses_json{};
+    // Animation programs are compiler-owned until the timeline editor lands.
+    // Preserve them verbatim so geometry edits cannot discard runtime behavior.
+    std::string animations_json{};
 };
 
 struct View {
@@ -905,7 +908,14 @@ bool save(const Scene& s, const char* filename)
     // Emit preserved compiler pose targets so a round trip does not drop them. The text is
     // already valid JSON captured at load time, so deserialize it into the target member
     // rather than replacing the whole document.
-    if (!s.poses_json.empty()) deserializeJson(r["poses"], s.poses_json);
+    if (!s.poses_json.empty()) {
+        const DeserializationError pose_error = deserializeJson(r["poses"], s.poses_json);
+        if (pose_error) return false;
+    }
+    if (!s.animations_json.empty()) {
+        const DeserializationError animation_error = deserializeJson(r["animations"], s.animations_json);
+        if (animation_error) return false;
+    }
     auto bg = r["background"].to<JsonArray>();
     bg.add(s.background.red);
     bg.add(s.background.green);
@@ -1257,7 +1267,7 @@ bool load(Scene& scene, const char* filename, std::string& error)
     }
     JsonObjectConst root = document.as<JsonObjectConst>();
     const std::string file_label{filename};
-    if (!rejectUnknown(root, {"version", "id", "background", "nodes", "poses"}, error, file_label)) return false;
+    if (!rejectUnknown(root, {"version", "id", "background", "nodes", "poses", "animations"}, error, file_label)) return false;
     if (!root["version"].is<int>() || root["version"].as<int>() != 1) {
         error = file_label + ".version: must be 1";
         return false;
@@ -1288,11 +1298,20 @@ bool load(Scene& scene, const char* filename, std::string& error)
         }
         serializeJson(root["poses"], poses_json);
     }
+    std::string animations_json;
+    if (!root["animations"].isNull()) {
+        if (!root["animations"].is<JsonObjectConst>()) {
+            error = file_label + ".animations: must be an object";
+            return false;
+        }
+        serializeJson(root["animations"], animations_json);
+    }
 
     Scene candidate{};
     candidate.id         = scene_id;
     candidate.file_path  = filename;
     candidate.poses_json = poses_json;
+    candidate.animations_json = animations_json;
     for (size_t node_index = 0; node_index < nodes.size(); ++node_index) {
         JsonObjectConst source  = nodes[node_index].as<JsonObjectConst>();
         const std::string where = file_label + ".nodes[" + std::to_string(node_index) + "]";

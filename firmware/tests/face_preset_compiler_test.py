@@ -39,6 +39,9 @@ class FacePresetCompilerTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("k_idle_cat", header.read_text())
             self.assertIn("k_idle_cat_alert_targets", header.read_text())
+            self.assertIn("FaceAnimationGoalDefinition k_idle_cat_animation_goals", header.read_text())
+            self.assertIn("FaceMotionSource::Keyframes", header.read_text())
+            self.assertIn("FaceMotionSource::Sine", header.read_text())
             source = directory / "generated_test.cpp"
             source.write_text(f'#include "{header}"\nint main() {{ return 0; }}\n')
             build = subprocess.run(["g++", "-std=c++17", "-I", str(FIRMWARE / "main"), str(source), "-c",
@@ -57,6 +60,8 @@ class FacePresetCompilerTest(unittest.TestCase):
             ("invalid-style", lambda value: value["nodes"][0].update(style=[]), "must be an object"),
             ("invalid-pose-channel", lambda value: value["poses"][0]["targets"][0].update(channel="circle.radius"), "requires a circle node"),
             ("duplicate-pose-channel", duplicate_pose_target, "duplicates another target channel"),
+            ("missing-idle-pose", lambda value: value.update(poses=[]), "must name a defined pose"),
+            ("missing-poses", lambda value: value.pop("poses"), "must name a defined pose"),
         ]
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
@@ -67,6 +72,28 @@ class FacePresetCompilerTest(unittest.TestCase):
                 result = self.compile(source, output)
                 self.assertEqual(result.returncode, 2, name)
                 self.assertIn(expected, result.stderr, name)
+
+    def test_invalid_pose_contract_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            contract = directory / "pose_contract.json"
+            contract.write_text(json.dumps({"version": 1}))
+            result = subprocess.run([sys.executable, str(COMPILER), str(VALID), "--contract", str(contract),
+                                     "--output", str(directory / "out.h")], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("default_scene", result.stderr)
+
+    def test_default_scene_must_be_compiled(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            contract = json.loads((FIRMWARE / "pet_faces" / "pose_contract.json").read_text())
+            contract["default_scene"] = "missing-scene"
+            contract_path = directory / "pose_contract.json"
+            contract_path.write_text(json.dumps(contract))
+            result = subprocess.run([sys.executable, str(COMPILER), str(VALID), "--contract", str(contract_path),
+                                     "--output", str(directory / "out.h")], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("must name a compiled scene", result.stderr)
 
     def test_duplicate_scene_ids_fail_at_schema_boundary(self):
         with tempfile.TemporaryDirectory() as directory:

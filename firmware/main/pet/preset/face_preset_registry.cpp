@@ -20,8 +20,8 @@ const FacePresetDefinition* findFacePreset(std::string_view id)
 
 const FacePresetDefinition* defaultFacePreset()
 {
-    // This ID is a product decision, not an incidental source-file order.
-    return findFacePreset("idle-cat");
+    // The default scene is a product decision recorded in the shared pose contract.
+    return findFacePreset(generated::kDefaultFacePresetId);
 }
 
 }  // namespace pet::preset

@@ -78,7 +78,14 @@ StackChan LCD coordinate space, exactly `320 x 240` design pixels. It saves
 the preset compiler to validate its saved scene. Run it from `firmware/` so
 the validation action can find `tools/compile_face_presets.py`. Copy a
 validated JSON scene into `pet_faces/` to compile it into Project Kiwi. The
-legacy `shape_studio` build target remains an alias for `kiwi_studio`.
+shared `pet_faces/pose_contract.json` selects the boot scene. Each scene's
+`animations` section defines its default goal, event routes, finite goal
+durations, compiled keyframe tracks, and procedural sources; the compiler
+rejects invalid or out-of-range animation data. Kiwi Studio preserves animation
+programs on load/save while its timeline editor is still pending. `pet_faces/face_schema.json` is the single source of truth
+for animatable channels, their ranges, preset capacities, and polygon defaults;
+run `python3 tools/generate_face_schema.py` after editing it. The legacy
+`shape_studio` build target remains an alias for `kiwi_studio`.
 
 Headless checks run from `firmware/` without opening a window:
 

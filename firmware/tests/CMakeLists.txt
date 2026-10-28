@@ -13,6 +13,9 @@ add_compile_options(-UNDEBUG)
 add_test(NAME face_preset_compiler_test
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/face_preset_compiler_test.py)
 
+add_test(NAME face_schema_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/face_schema_test.py)
+
 add_executable(motion_math_test
     motion_math_test.cpp
     ../main/stackchan/motion/motion_math.cpp
@@ -95,6 +98,23 @@ target_include_directories(face_pose_engine_test PRIVATE
 target_compile_features(face_pose_engine_test PRIVATE cxx_std_17)
 
 add_test(NAME face_pose_engine_test COMMAND $<TARGET_FILE:face_pose_engine_test>)
+
+add_executable(face_animation_engine_test
+    face_animation_engine_test.cpp
+    ../main/pet/preset/face_animation_engine.cpp
+    ../main/pet/preset/face_pose_engine.cpp
+    ../main/pet/preset/motion_response.cpp
+    ../main/pet/shape/rounded_polygon.cpp
+    ../main/pet/shape/shape_path.cpp
+)
+
+target_include_directories(face_animation_engine_test PRIVATE
+    ../main
+)
+
+target_compile_features(face_animation_engine_test PRIVATE cxx_std_17)
+
+add_test(NAME face_animation_engine_test COMMAND $<TARGET_FILE:face_animation_engine_test>)
 
 add_executable(shape_core_test
     shape_core_test.cpp

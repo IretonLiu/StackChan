@@ -5,13 +5,12 @@
 
 #include "face_preset.h"
 
+#include <pet/face_schema.generated.h>
+
 #include <array>
 #include <cstdint>
 
 namespace pet::preset {
-
-/** Matches the compiler and FaceDrawing node capacity. */
-constexpr uint8_t kMaxFacePresetNodes = 16;
 
 /**
  * Caller-owned evaluated preset state. Future motion definitions modify this

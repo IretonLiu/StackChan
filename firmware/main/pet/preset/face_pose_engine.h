@@ -6,33 +6,13 @@
 #include "face_preset_evaluator.h"
 #include "motion_response.h"
 
+#include <pet/face_schema.generated.h>
+
 #include <array>
 #include <cstdint>
 #include <string_view>
 
 namespace pet::preset {
-
-constexpr uint8_t kMaxFacePresetPoses = 8;
-constexpr uint8_t kMaxFacePoseTargets = 32;
-
-/** One scalar control exposed by the fixed-capacity face primitive vocabulary. */
-enum class FacePoseChannel : uint8_t {
-    TransformTranslationX,
-    TransformTranslationY,
-    TransformRotationDegrees,
-    TransformScaleX,
-    TransformScaleY,
-    CircleCenterX,
-    CircleCenterY,
-    CircleRadius,
-    PolygonVertexX,
-    PolygonVertexY,
-    PolygonCornerRoundness,
-    PolygonCornerCapTension,
-    PolygonEdgeBulge,
-    PolygonEdgeStart,
-    PolygonEdgeEnd,
-};
 
 /** A typed compiled target; `element_index` selects a polygon vertex when required. */
 struct FacePoseTargetDefinition {
@@ -77,9 +57,15 @@ struct FacePoseRuntime {
                                   const FacePresetEvaluation& base, FacePoseRuntime& runtime);
 
 /**
- * Advances all selected targets and writes them to `evaluation` transactionally.
- * On failure, both `runtime` and `evaluation` remain unchanged.
+ * Advances all selected targets and writes them to `evaluation`.
+ *
+ * A target that cannot advance, or that would make the polygon geometry invalid,
+ * is settled at its last valid value instead of rolling back every target and
+ * retrying the same rejected step forever. Other targets may continue, so the
+ * caller should render when `changed` is true and should treat a false return as
+ * a degraded/recoverable frame rather than a reason to stop updating the face.
  */
-[[nodiscard]] bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEvaluation& evaluation);
+[[nodiscard]] bool advanceFacePose(FacePoseRuntime& runtime, float delta_seconds, FacePresetEvaluation& evaluation,
+                                   bool* changed = nullptr);
 
 }  // namespace pet::preset

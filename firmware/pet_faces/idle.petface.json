@@ -125,5 +125,99 @@
         }
       ]
     }
-  ]
+  ],
+  "animations": {
+    "default_goal": "idle",
+    "goals": [
+      {
+        "id": "idle",
+        "pose": "idle",
+        "events": [],
+        "priority": 0,
+        "duration_ms": 0,
+        "programs": [
+          {
+            "id": "blink",
+            "duration_seconds": 4.2,
+            "loop": true,
+            "priority": 20,
+            "tracks": [
+              {
+                "node": "left-eye",
+                "channel": "transform.scale_y",
+                "priority": 0,
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    { "time_seconds": 0, "value": 1 },
+                    { "time_seconds": 3.5, "value": 1 },
+                    { "time_seconds": 3.62, "value": 0.08 },
+                    { "time_seconds": 3.78, "value": 1 },
+                    { "time_seconds": 4.2, "value": 1 }
+                  ]
+                }
+              },
+              {
+                "node": "right-eye",
+                "channel": "transform.scale_y",
+                "priority": 0,
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    { "time_seconds": 0, "value": 1 },
+                    { "time_seconds": 3.5, "value": 1 },
+                    { "time_seconds": 3.62, "value": 0.08 },
+                    { "time_seconds": 3.78, "value": 1 },
+                    { "time_seconds": 4.2, "value": 1 }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "ear-drift",
+            "duration_seconds": 2.8,
+            "loop": true,
+            "priority": 10,
+            "tracks": [
+              {
+                "node": "left-ear",
+                "channel": "transform.rotation_degrees",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": -30,
+                  "amplitude": 8,
+                  "period_seconds": 2.8,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "right-ear",
+                "channel": "transform.rotation_degrees",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 30,
+                  "amplitude": 8,
+                  "period_seconds": 2.8,
+                  "phase_radians": 3.141593
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "alert",
+        "pose": "alert",
+        "events": ["pet", "shake"],
+        "priority": 10,
+        "duration_ms": 1200,
+        "programs": []
+      }
+    ]
+  }
 }

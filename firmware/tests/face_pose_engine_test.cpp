@@ -30,6 +30,23 @@ bool snapToTarget(MotionResponseState& state, float target, float, const MotionR
     return true;
 }
 
+bool g_invalid_intermediate = false;
+
+// Simulates a response that crosses a degenerate intermediate state before reaching
+// a valid endpoint, which is the failure mode advanceFacePose() must recover from.
+bool invalidIntermediateThenTarget(MotionResponseState& state, float target, float, const MotionResponseProfile&)
+{
+    if (g_invalid_intermediate) {
+        g_invalid_intermediate = false;
+        state.value            = 0.0f;
+        state.velocity         = 0.0f;
+    } else {
+        state.value    = target;
+        state.velocity = 0.0f;
+    }
+    return true;
+}
+
 FacePresetEvaluation baseEvaluation()
 {
     FacePresetEvaluation result;
@@ -124,6 +141,59 @@ void testInvalidDefinitionsDoNotReplaceRuntime()
     assert(runtime.target_count == preserved.target_count);
 }
 
+void testOutOfBoundsPolygonTargetIsRejected()
+{
+    const FacePoseTargetDefinition targets[] = {{1, FacePoseChannel::PolygonVertexX, 5, 10.0f, profile()}};
+    const FacePoseDefinition poses[]         = {{"wide", targets, 1}};
+    const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1};
+    FacePresetEvaluation base = baseEvaluation();
+    // A hand-built evaluation can claim more vertices than the fixed array holds.
+    base.nodes[1].rounded_polygon.vertex_count = 6;
+    FacePoseRuntime runtime;
+
+    assert(!pet::preset::selectFacePose(preset, "wide", base, runtime));
+}
+
+void testAdvanceReportsOnlyVisibleMovement()
+{
+    const FacePoseTargetDefinition targets[] = {{0, FacePoseChannel::CircleRadius, 0, 14.0f, profile()}};
+    const FacePoseDefinition poses[]         = {{"wide", targets, 1}};
+    const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1};
+    const FacePresetEvaluation base = baseEvaluation();
+    FacePresetEvaluation evaluation = base;
+    FacePoseRuntime runtime;
+    runtime.response_function = snapToTarget;
+
+    assert(pet::preset::selectFacePose(preset, "wide", base, runtime));
+    bool changed = false;
+    assert(pet::preset::advanceFacePose(runtime, 0.02f, evaluation, &changed));
+    assert(changed);
+    assert(near(evaluation.nodes[0].circle.radius, 14.0f));
+
+    changed = true;
+    assert(pet::preset::advanceFacePose(runtime, 0.02f, evaluation, &changed));
+    assert(!changed);
+    assert(near(evaluation.nodes[0].circle.radius, 14.0f));
+}
+
+void testRejectedIntermediateStateDoesNotStallPose()
+{
+    const FacePoseTargetDefinition targets[] = {{1, FacePoseChannel::PolygonVertexX, 1, 30.0f, profile()}};
+    const FacePoseDefinition poses[]         = {{"wide", targets, 1}};
+    const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1};
+    const FacePresetEvaluation base = baseEvaluation();
+    FacePresetEvaluation evaluation = base;
+    FacePoseRuntime runtime;
+    runtime.response_function = invalidIntermediateThenTarget;
+    g_invalid_intermediate    = true;
+
+    assert(pet::preset::selectFacePose(preset, "wide", base, runtime));
+    bool changed = false;
+    assert(pet::preset::advanceFacePose(runtime, 0.02f, evaluation, &changed));
+    assert(changed);
+    assert(near(evaluation.nodes[1].rounded_polygon.vertices[1].x, 30.0f));
+}
+
 }  // namespace
 
 int main()
@@ -131,5 +201,8 @@ int main()
     testTypedTargetsApplyThroughInjectedResponse();
     testChangingGoalRetainsCurrentState();
     testInvalidDefinitionsDoNotReplaceRuntime();
+    testOutOfBoundsPolygonTargetIsRejected();
+    testAdvanceReportsOnlyVisibleMovement();
+    testRejectedIntermediateStateDoesNotStallPose();
     return 0;
 }
