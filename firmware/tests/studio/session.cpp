@@ -26,13 +26,12 @@ bool saveSession(SceneDoc& document, EditorState& editor)
 
 bool loadSession(SceneDoc& document, EditorState& editor)
 {
-    SceneDoc candidate;
     std::string error;
-    if (!load(candidate, editor.file_path.c_str(), error)) {
+    // load() is transactional: on failure it leaves `document` untouched.
+    if (!load(document, editor.file_path.c_str(), error)) {
         editor.status = error;
         return false;
     }
-    document         = candidate;
     editor.selection = document.count == 0 ? -1 : 0;
     editor.dirty     = false;
     editor.status    = "Loaded " + editor.file_path;
