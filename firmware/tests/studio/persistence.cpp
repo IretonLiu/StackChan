@@ -110,14 +110,13 @@ bool save(const SceneDoc& document, const char* filename)
             x["radius"] = o.circle.radius;
         } else {
             auto x  = n["rounded_polygon"].to<JsonObject>();
-            auto vs = x["vertices"].to<JsonArray>();
             auto cs = x["corners"].to<JsonArray>();
             auto es = x["edges"].to<JsonArray>();
-            for (uint8_t j = 0; j < o.polygon.vertex_count; j++) {
-                auto v = vs.add<JsonArray>();
-                v.add(o.polygon.vertices[j].x);
-                v.add(o.polygon.vertices[j].y);
-                auto c           = cs.add<JsonObject>();
+            for (uint8_t j = 0; j < o.polygon.corner_count; j++) {
+                auto c = cs.add<JsonObject>();
+                auto p = c["position"].to<JsonArray>();
+                p.add(o.polygon.corner_positions[j].x);
+                p.add(o.polygon.corner_positions[j].y);
                 c["roundness"]   = o.polygon.corners[j].roundness;
                 c["cap_tension"] = o.polygon.corners[j].cap_tension;
                 auto e           = es.add<JsonObject>();
@@ -495,38 +494,32 @@ bool load(SceneDoc& out_document, const char* filename, std::string& error)
                 return false;
             }
             JsonObjectConst polygon = source["rounded_polygon"].as<JsonObjectConst>();
-            if (!rejectUnknown(polygon, {"vertices", "corners", "edges"}, error, where + ".rounded_polygon"))
-                return false;
-            JsonArrayConst vertices = polygon["vertices"].as<JsonArrayConst>();
-            if (vertices.isNull() || vertices.size() < 3 || vertices.size() > kMaxRoundedPolygonVertices) {
-                error = where + ".rounded_polygon.vertices: must contain 3.." +
-                        std::to_string(kMaxRoundedPolygonVertices) + " points";
-                return false;
-            }
+            if (!rejectUnknown(polygon, {"corners", "edges"}, error, where + ".rounded_polygon")) return false;
             JsonArrayConst corners = polygon["corners"].as<JsonArrayConst>();
-            JsonArrayConst edges   = polygon["edges"].as<JsonArrayConst>();
-            if (corners.isNull() || corners.size() != vertices.size()) {
-                error = where + ".rounded_polygon.corners: must have one entry per vertex";
+            if (corners.isNull() || corners.size() < 3 || corners.size() > kMaxRoundedPolygonCorners) {
+                error = where + ".rounded_polygon.corners: must contain 3.." +
+                        std::to_string(kMaxRoundedPolygonCorners) + " corners";
                 return false;
             }
-            if (edges.isNull() || edges.size() != vertices.size()) {
-                error = where + ".rounded_polygon.edges: must have one entry per vertex";
+            JsonArrayConst edges = polygon["edges"].as<JsonArrayConst>();
+            if (edges.isNull() || edges.size() != corners.size()) {
+                error = where + ".rounded_polygon.edges: must have one entry per corner";
                 return false;
             }
-            node.polygon.vertex_count = uint8_t(vertices.size());
-            for (uint8_t index = 0; index < node.polygon.vertex_count; ++index) {
-                const std::string vertex_where = where + ".rounded_polygon.vertices[" + std::to_string(index) + "]";
-                if (!readPoint(vertices[index], node.polygon.vertices[index])) {
-                    error = vertex_where + ": must be a two-number array";
-                    return false;
-                }
+            node.polygon.corner_count = uint8_t(corners.size());
+            for (uint8_t index = 0; index < node.polygon.corner_count; ++index) {
                 const std::string corner_where = where + ".rounded_polygon.corners[" + std::to_string(index) + "]";
                 if (!corners[index].is<JsonObjectConst>()) {
                     error = corner_where + ": must be an object";
                     return false;
                 }
                 JsonObjectConst corner = corners[index].as<JsonObjectConst>();
-                if (!rejectUnknown(corner, {"roundness", "cap_tension"}, error, corner_where)) return false;
+                if (!rejectUnknown(corner, {"position", "roundness", "cap_tension"}, error, corner_where)) return false;
+                if (corner["position"].isNull() ||
+                    !readPoint(corner["position"], node.polygon.corner_positions[index])) {
+                    error = corner_where + ".position: must be a two-number array";
+                    return false;
+                }
                 if (!corner["roundness"].isNull() &&
                     !readNumber(corner["roundness"], node.polygon.corners[index].roundness)) {
                     error = corner_where + ".roundness: must be a finite number";

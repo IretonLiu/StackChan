@@ -25,8 +25,8 @@ enum class FacePoseChannel : uint8_t {
     CircleCenterX,
     CircleCenterY,
     CircleRadius,
-    PolygonVertexX,
-    PolygonVertexY,
+    PolygonCornerX,
+    PolygonCornerY,
     PolygonCornerRoundness,
     PolygonCornerCapTension,
     PolygonEdgeBulge,
@@ -34,7 +34,7 @@ enum class FacePoseChannel : uint8_t {
     PolygonEdgeEnd,
 };
 
-/** A typed compiled target; `element_index` selects a polygon vertex when required. */
+/** A typed compiled target; `element_index` selects a polygon corner or edge when required. */
 struct FacePoseTargetDefinition {
     uint8_t node_index      = 0;
     FacePoseChannel channel = FacePoseChannel::TransformTranslationX;

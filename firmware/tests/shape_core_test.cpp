@@ -177,9 +177,9 @@ void testNonFiniteInputsAreRejected()
 void testRoundedPolygonAndCircle()
 {
     pet::shape::RoundedPolygonParameters polygon;
-    polygon.vertex_count = 5;
-    polygon.vertices     = {{{0.0f, -1.0f}, {0.95f, -0.3f}, {0.59f, 0.81f}, {-0.59f, 0.81f}, {-0.95f, -0.3f}}};
-    for (uint8_t index = 0; index < polygon.vertex_count; ++index) {
+    polygon.corner_count     = 5;
+    polygon.corner_positions = {{{0.0f, -1.0f}, {0.95f, -0.3f}, {0.59f, 0.81f}, {-0.59f, 0.81f}, {-0.95f, -0.3f}}};
+    for (uint8_t index = 0; index < polygon.corner_count; ++index) {
         polygon.corners[index] = {0.12f, 0.55f};
         polygon.edges[index]   = {(index % 2 == 0) ? 0.20f : -0.12f, 0.28f, 0.28f};
     }
@@ -188,8 +188,8 @@ void testRoundedPolygonAndCircle()
     assert(polygon_sample.path.command_count == 12);
     assert(polygon_sample.path.commands[0].type == PathCommandType::Move);
     assert(polygon_sample.path.commands[11].type == PathCommandType::Close);
-    for (uint8_t index = 0; index < polygon.vertex_count; ++index) {
-        const size_t next_corner     = (index + 1) % polygon.vertex_count;
+    for (uint8_t index = 0; index < polygon.corner_count; ++index) {
+        const size_t next_corner     = (index + 1) % polygon.corner_count;
         const auto& edge             = polygon_sample.edges[index];
         const auto& following_corner = polygon_sample.corners[next_corner];
         const auto& preceding_corner = polygon_sample.corners[index];
@@ -199,11 +199,11 @@ void testRoundedPolygonAndCircle()
                               subtract(edge.first_control, edge.start))) < 0.0001f);
     }
 
-    polygon.vertex_count = 2;
+    polygon.corner_count = 2;
     assert(!pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
-    assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::InvalidVertexCount);
-    polygon.vertex_count = 4;
-    polygon.vertices     = {{{-1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}, {1.0f, -1.0f}}};
+    assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::InvalidCornerCount);
+    polygon.corner_count     = 4;
+    polygon.corner_positions = {{{-1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}, {1.0f, -1.0f}}};
     assert(!pet::shape::sampleRoundedPolygon(polygon, {}, polygon_sample));
     assert(polygon_sample.error == pet::shape::RoundedPolygonSampleError::DegenerateOrNonConvex);
 
@@ -254,11 +254,11 @@ void testPresetEvaluatorPreservesStaticDefinitions()
 void testCompiledPresetBuildsFaceDrawing()
 {
     pet::preset::FacePresetNodeDefinition nodes[2]{};
-    nodes[0].kind                         = pet::preset::ShapeKind::Circle;
-    nodes[0].circle                       = {{10.0f, 20.0f}, 5.0f};
-    nodes[1].kind                         = pet::preset::ShapeKind::RoundedPolygon;
-    nodes[1].rounded_polygon.vertex_count = 3;
-    nodes[1].rounded_polygon.vertices     = {{{0.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}}};
+    nodes[0].kind                             = pet::preset::ShapeKind::Circle;
+    nodes[0].circle                           = {{10.0f, 20.0f}, 5.0f};
+    nodes[1].kind                             = pet::preset::ShapeKind::RoundedPolygon;
+    nodes[1].rounded_polygon.corner_count     = 3;
+    nodes[1].rounded_polygon.corner_positions = {{{0.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}}};
     pet::preset::FacePresetDefinition preset{"test", {7, 16, 24}, nodes, 2};
     pet::face::FaceDrawing drawing;
     assert(pet::preset::buildFaceDrawing(preset, drawing));

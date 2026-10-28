@@ -54,12 +54,12 @@ const char* shapeProblem(const Node& node, const Affine2D& world)
     RoundedPolygonSample sample;
     if (sampleRoundedPolygon(node.polygon, world, sample, node.style)) return nullptr;
     switch (sample.error) {
-        case RoundedPolygonSampleError::InvalidVertexCount:
-            return "vertex count must be between 3 and 5";
+        case RoundedPolygonSampleError::InvalidCornerCount:
+            return "corner count must be between 3 and 5";
         case RoundedPolygonSampleError::DegenerateOrNonConvex:
-            return "vertices must form a convex polygon";
+            return "corner positions must form a convex polygon";
         case RoundedPolygonSampleError::NonFiniteParameters:
-            return "a vertex or edge value is not finite";
+            return "a corner or edge value is not finite";
         case RoundedPolygonSampleError::NonFiniteTransform:
             return "transform produces a singular shape";
         case RoundedPolygonSampleError::NonFiniteStyle:

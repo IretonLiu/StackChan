@@ -24,13 +24,14 @@ struct EditorState {
     bool reset_requested = false;
 
     // Overlays.
-    bool show_bounds          = false;
-    bool show_guides          = false;
-    bool show_vertices        = true;
-    bool show_bezier_controls = false;
+    bool show_bounds  = false;
+    bool show_guides  = false;
+    bool show_corners = true;   // corner joint + two tips
+    bool show_edges   = false;  // edge in/out rails
 
     // Active interaction. `drag_handle_kind`: 0=edge in, 1=edge out, 2=corner tip A,
-    // 3=corner tip B, 4=vertex position.
+    // 3=corner tip B, 4=corner joint position. Corners and edges are the only
+    // grabbable primitives; a bare vertex is not a thing you can select.
     int drag_node         = -1;
     int drag_handle_node  = -1;
     int drag_handle_kind  = -1;

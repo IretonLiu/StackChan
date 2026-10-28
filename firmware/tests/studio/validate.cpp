@@ -70,35 +70,37 @@ bool validateScene(const SceneDoc& document, Problem& problem)
                 !std::isfinite(node.circle.radius) || node.circle.radius <= 0.0f)
                 return fail(problem, where + ".circle", "center and positive radius must be finite");
         } else {
-            const uint8_t count = node.polygon.vertex_count;
-            if (count < 3 || count > pet::shape::kMaxRoundedPolygonVertices)
-                return fail(problem, where + ".rounded_polygon.vertices",
-                            "must contain 3.." + std::to_string(pet::shape::kMaxRoundedPolygonVertices) + " points");
+            const uint8_t count = node.polygon.corner_count;
+            if (count < 3 || count > pet::shape::kMaxRoundedPolygonCorners)
+                return fail(problem, where + ".rounded_polygon.corners",
+                            "must contain 3.." + std::to_string(pet::shape::kMaxRoundedPolygonCorners) + " corners");
             float first_turn = 0.0f;
-            for (uint8_t vertex = 0; vertex < count; ++vertex) {
-                const Vec2& point = node.polygon.vertices[vertex];
+            for (uint8_t corner = 0; corner < count; ++corner) {
+                const Vec2& point = node.polygon.corner_positions[corner];
                 if (!std::isfinite(point.x) || !std::isfinite(point.y))
-                    return fail(problem, where + ".rounded_polygon.vertices", "points must be finite");
-                const float turn = cross(node.polygon.vertices[(vertex + count - 1) % count], point,
-                                         node.polygon.vertices[(vertex + 1) % count]);
+                    return fail(problem, where + ".rounded_polygon.corners[" + std::to_string(corner) + "].position",
+                                "must be finite");
+                const float turn = cross(node.polygon.corner_positions[(corner + count - 1) % count], point,
+                                         node.polygon.corner_positions[(corner + 1) % count]);
                 if (std::fabs(turn) < .0001f)
-                    return fail(problem, where + ".rounded_polygon.vertices", "must be non-degenerate");
-                if (vertex == 0)
+                    return fail(problem, where + ".rounded_polygon.corners", "corner positions must be non-degenerate");
+                if (corner == 0)
                     first_turn = turn;
                 else if (first_turn * turn <= 0.0f)
-                    return fail(problem, where + ".rounded_polygon.vertices", "must be convex with consistent winding");
-                if (!std::isfinite(node.polygon.corners[vertex].roundness) ||
-                    node.polygon.corners[vertex].roundness < 0.0f || node.polygon.corners[vertex].roundness > .35f ||
-                    !std::isfinite(node.polygon.corners[vertex].cap_tension) ||
-                    node.polygon.corners[vertex].cap_tension < .10f || node.polygon.corners[vertex].cap_tension > .90f)
-                    return fail(problem, where + ".rounded_polygon.corners[" + std::to_string(vertex) + "]",
+                    return fail(problem, where + ".rounded_polygon.corners",
+                                "corner positions must be convex with consistent winding");
+                if (!std::isfinite(node.polygon.corners[corner].roundness) ||
+                    node.polygon.corners[corner].roundness < 0.0f || node.polygon.corners[corner].roundness > .35f ||
+                    !std::isfinite(node.polygon.corners[corner].cap_tension) ||
+                    node.polygon.corners[corner].cap_tension < .10f || node.polygon.corners[corner].cap_tension > .90f)
+                    return fail(problem, where + ".rounded_polygon.corners[" + std::to_string(corner) + "]",
                                 "outside safe range");
-                if (!std::isfinite(node.polygon.edges[vertex].bulge) || node.polygon.edges[vertex].bulge < -.35f ||
-                    node.polygon.edges[vertex].bulge > .35f || !std::isfinite(node.polygon.edges[vertex].start) ||
-                    node.polygon.edges[vertex].start < .08f || node.polygon.edges[vertex].start > .45f ||
-                    !std::isfinite(node.polygon.edges[vertex].end) || node.polygon.edges[vertex].end < .08f ||
-                    node.polygon.edges[vertex].end > .45f)
-                    return fail(problem, where + ".rounded_polygon.edges[" + std::to_string(vertex) + "]",
+                if (!std::isfinite(node.polygon.edges[corner].bulge) || node.polygon.edges[corner].bulge < -.35f ||
+                    node.polygon.edges[corner].bulge > .35f || !std::isfinite(node.polygon.edges[corner].start) ||
+                    node.polygon.edges[corner].start < .08f || node.polygon.edges[corner].start > .45f ||
+                    !std::isfinite(node.polygon.edges[corner].end) || node.polygon.edges[corner].end < .08f ||
+                    node.polygon.edges[corner].end > .45f)
+                    return fail(problem, where + ".rounded_polygon.edges[" + std::to_string(corner) + "]",
                                 "outside safe range");
             }
         }

@@ -53,8 +53,8 @@ SoftPolygonEarParameters clampEarControls(SoftPolygonEarParameters result, bool&
 RoundedPolygonParameters toRoundedPolygon(const SoftPolygonEarParameters& parameters)
 {
     RoundedPolygonParameters result;
-    result.vertex_count = 3;
-    result.vertices = {{{-0.5f, 0.0f}, {parameters.lean + parameters.tip_bend * 0.5f, -1.0f}, {0.5f, 0.0f}}};
+    result.corner_count = 3;
+    result.corner_positions = {{{-0.5f, 0.0f}, {parameters.lean + parameters.tip_bend * 0.5f, -1.0f}, {0.5f, 0.0f}}};
     result.corners[0] = parameters.base_corners;
     result.corners[1] = parameters.tip_corner;
     result.corners[2] = parameters.base_corners;

@@ -26,6 +26,12 @@ def duplicate_pose_target(scene):
     scene["poses"][0]["targets"].append(dict(scene["poses"][0]["targets"][0]))
 
 
+def make_concave(scene):
+    polygon = scene["nodes"][0]["rounded_polygon"]
+    polygon["corners"] = [{"position": position} for position in [[0, 0], [1, 0], [0.2, 0.2], [0, 1]]]
+    polygon["edges"] = [{}, {}, {}, {}]
+
+
 class FacePresetCompilerTest(unittest.TestCase):
     def compile(self, source, output):
         return subprocess.run([sys.executable, str(COMPILER), str(source), "--output", str(output)],
@@ -50,7 +56,7 @@ class FacePresetCompilerTest(unittest.TestCase):
         cases = [
             ("unknown-kind", lambda value: value["nodes"][0].update(kind="spline"), "must be circle or rounded_polygon"),
             ("zero-circle", lambda value: set_circle_radius(value, 0), "must be positive"),
-            ("concave", lambda value: value["nodes"][0]["rounded_polygon"].update(vertices=[[0, 0], [1, 0], [0.2, 0.2], [0, 1]]), "consistent winding"),
+            ("concave", make_concave, "consistent winding"),
             ("unknown-field", lambda value: value.update(unexpected=True), "unknown field"),
             ("unknown-parent", lambda value: value["nodes"][1].update(parent="not-a-node"), "must name an earlier node"),
             ("overflow", lambda value: set_circle_radius(value, 1e100), "must fit a finite C++ float"),

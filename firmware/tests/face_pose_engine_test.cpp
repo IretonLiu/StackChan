@@ -33,12 +33,12 @@ bool snapToTarget(MotionResponseState& state, float target, float, const MotionR
 FacePresetEvaluation baseEvaluation()
 {
     FacePresetEvaluation result;
-    result.node_count                            = 2;
-    result.nodes[0].kind                         = ShapeKind::Circle;
-    result.nodes[0].circle                       = {{120.0f, 120.0f}, 6.0f};
-    result.nodes[1].kind                         = ShapeKind::RoundedPolygon;
-    result.nodes[1].rounded_polygon.vertex_count = 4;
-    result.nodes[1].rounded_polygon.vertices     = {{{0.0f, 0.0f}, {40.0f, 0.0f}, {40.0f, 40.0f}, {0.0f, 40.0f}}};
+    result.node_count                                = 2;
+    result.nodes[0].kind                             = ShapeKind::Circle;
+    result.nodes[0].circle                           = {{120.0f, 120.0f}, 6.0f};
+    result.nodes[1].kind                             = ShapeKind::RoundedPolygon;
+    result.nodes[1].rounded_polygon.corner_count     = 4;
+    result.nodes[1].rounded_polygon.corner_positions = {{{0.0f, 0.0f}, {40.0f, 0.0f}, {40.0f, 40.0f}, {0.0f, 40.0f}}};
     for (uint8_t index = 0; index < 4; ++index) {
         result.nodes[1].rounded_polygon.corners[index] = {0.08f, 0.55f};
         result.nodes[1].rounded_polygon.edges[index]   = {0.0f, 0.28f, 0.28f};

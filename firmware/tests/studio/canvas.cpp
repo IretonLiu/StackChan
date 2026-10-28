@@ -138,13 +138,13 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
     const auto vscale = [](Vec2 value, float factor) { return Vec2{value.x * factor, value.y * factor}; };
     const auto vcross = [](Vec2 left, Vec2 right) { return left.x * right.y - left.y * right.x; };
     struct CanvasHandle {
-        // 0=edge in, 1=edge out, 2=corner tip A, 3=corner tip B, 4=vertex position.
+        // 0=edge in, 1=edge out, 2=corner tip A, 3=corner tip B, 4=corner joint position.
         int kind  = 0;
         int index = 0;
         ImVec2 point{};
         ImVec2 anchor{};
     };
-    constexpr size_t kMaxCanvasHandles = kMaxRoundedPolygonVertices * 5;
+    constexpr size_t kMaxCanvasHandles = kMaxRoundedPolygonCorners * 5;
     std::array<CanvasHandle, kMaxCanvasHandles> canvas_handles{};
     size_t canvas_handle_count = 0;
     bool handle_edit_ready     = false;
@@ -156,7 +156,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
     const auto handle_colour = [](int kind) {
         switch (kind) {
             case 4:
-                return IM_COL32(130, 190, 255, 255);  // vertex
+                return IM_COL32(130, 190, 255, 255);  // corner joint
             case 2:
             case 3:
                 return IM_COL32(120, 215, 255, 255);  // corner tips
@@ -175,7 +175,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
             case 3:
                 return "corner tip B";
             default:
-                return "vertex";
+                return "corner joint";
         }
     };
     // Reads authored parameters so tips describe the document being edited, not the
@@ -187,7 +187,8 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
         }
         const Node& node = document.nodes[editor.selection];
         if (kind == 4) {
-            snprintf(out, size, "Vertex %d · drag to move", index);
+            const auto& position = node.polygon.corner_positions[index];
+            snprintf(out, size, "Corner %d · position %.0f, %.0f · drag to move", index, position.x, position.y);
         } else if (kind <= 1) {
             const auto& edge    = node.polygon.edges[index];
             const float trim    = kind == 0 ? edge.start : edge.end;
@@ -211,23 +212,23 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
 
     // Handles describe authored geometry. While the motion preview clock runs the drawn
     // shape is animated, so editing it would not correspond to a single authored value.
-    if (hierarchy_valid && !editor.motion.playing && (editor.show_bezier_controls || editor.show_vertices) &&
+    if (hierarchy_valid && !editor.motion.playing && (editor.show_corners || editor.show_edges) &&
         editor.selection >= 0 && editor.selection < static_cast<int>(document.count)) {
         const Node& selected = document.nodes[editor.selection];
         if (selected.visible && selected.kind == Kind::Polygon &&
             sampleRoundedPolygon(selected.polygon, worlds[editor.selection], handle_sample, selected.style) &&
             invert(worlds[editor.selection], handle_world_inverse)) {
             handle_edit_ready          = true;
-            const uint8_t vertex_count = handle_sample.parameters.vertex_count;
-            // Vertex controls first: edge/corner handles take hit-test priority on ties.
-            if (editor.show_vertices)
-                for (uint8_t vertex_index = 0; vertex_index < vertex_count; ++vertex_index) {
+            const uint8_t corner_count = handle_sample.parameters.corner_count;
+            // Corner joints go in first so the tip and edge handles win hit-test ties.
+            if (editor.show_corners)
+                for (uint8_t corner_index = 0; corner_index < corner_count; ++corner_index) {
                     const ImVec2 point =
-                        to_screen(worlds[editor.selection], handle_sample.parameters.vertices[vertex_index]);
-                    canvas_handles[canvas_handle_count++] = {4, vertex_index, point, point};
+                        to_screen(worlds[editor.selection], handle_sample.parameters.corner_positions[corner_index]);
+                    canvas_handles[canvas_handle_count++] = {4, corner_index, point, point};
                 }
-            if (editor.show_bezier_controls) {
-                for (uint8_t edge_index = 0; edge_index < vertex_count; ++edge_index) {
+            if (editor.show_edges)
+                for (uint8_t edge_index = 0; edge_index < corner_count; ++edge_index) {
                     const auto& edge                      = handle_sample.edges[edge_index];
                     canvas_handles[canvas_handle_count++] = {0, edge_index,
                                                              to_screen(worlds[editor.selection], edge.first_control),
@@ -236,7 +237,8 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
                                                              to_screen(worlds[editor.selection], edge.second_control),
                                                              to_screen(worlds[editor.selection], edge.end)};
                 }
-                for (uint8_t corner_index = 0; corner_index < vertex_count; ++corner_index) {
+            if (editor.show_corners)
+                for (uint8_t corner_index = 0; corner_index < corner_count; ++corner_index) {
                     const auto& corner                    = handle_sample.corners[corner_index];
                     canvas_handles[canvas_handle_count++] = {2, corner_index,
                                                              to_screen(worlds[editor.selection], corner.first_control),
@@ -245,7 +247,6 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
                                                              to_screen(worlds[editor.selection], corner.second_control),
                                                              to_screen(worlds[editor.selection], corner.end)};
                 }
-            }
             if (ImGui::IsWindowHovered()) {
                 const ImVec2 mouse = ImGui::GetIO().MousePos;
                 float best         = 12.0f;
@@ -286,11 +287,12 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
                        {o.x + p.bounds.maximum.x * z, o.y + p.bounds.maximum.y * z}, IM_COL32(132, 204, 22, 255));
             const Vec2 pivot = transformPoint(worlds[i], node.transform.pivot);
             d->AddCircle({o.x + pivot.x * z, o.y + pivot.y * z}, 3.0f, IM_COL32(255, 200, 60, 255));
-            if (node.kind == Kind::Polygon && editor.show_vertices && !(handle_edit_ready && editor.show_vertices)) {
-                // Vertex handles replace the static dots whenever they are interactive.
+            if (node.kind == Kind::Polygon && (editor.show_corners || editor.show_edges) && !handle_edit_ready) {
+                // Static corner dots stand in when interactive handles are unavailable
+                // (invalid sample or the preview clock is running).
                 RoundedPolygonSample landmarks;
                 if (sampleRoundedPolygon(node.polygon, worlds[i], landmarks, node.style))
-                    for (uint8_t v = 0; v < landmarks.parameters.vertex_count; ++v)
+                    for (uint8_t v = 0; v < landmarks.parameters.corner_count; ++v)
                         d->AddCircle({o.x + landmarks.landmarks[v].x * z, o.y + landmarks.landmarks[v].y * z}, 2.5f,
                                      IM_COL32(120, 200, 255, 255));
             }
@@ -309,7 +311,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
             const float radius = active ? 7.0f : (hovered ? 6.0f : 4.5f);
             const ImVec2 p     = handle.point;
             if (handle.kind == 4) {
-                // Vertices: solid dot, no tangent line. Moves the polygon skeleton.
+                // Corner joint: solid dot, no tangent line. Moves the corner position.
                 d->AddCircleFilled(p, radius, colour);
                 if (active || hovered) d->AddCircle(p, radius + 2.0f, colour);
             } else if (handle.kind <= 1) {
@@ -381,7 +383,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
             const Vec2 world{(mouse.x - o.x) / z, (mouse.y - o.y) / z};
             const Vec2 local           = transformPoint(handle_world_inverse, world);
             Node& node                 = document.nodes[editor.drag_handle_node];
-            const uint8_t vertex_count = handle_sample.parameters.vertex_count;
+            const uint8_t corner_count = handle_sample.parameters.corner_count;
             const bool snap            = ImGui::GetIO().KeyShift;
             // Clamp after snapping: rounding can push a value past its bound (0.45 snaps to
             // 0.46 at step 0.02), which the preset compiler would then reject.
@@ -402,21 +404,21 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
                         editor.status = "Drag rejected: keep the polygon valid";
                 }
             };
-            if (editor.drag_handle_index >= 0 && editor.drag_handle_index < vertex_count) {
+            if (editor.drag_handle_index >= 0 && editor.drag_handle_index < corner_count) {
                 const auto& parameters = handle_sample.parameters;
                 if (editor.drag_handle_kind == 4) {
-                    // Vertex handle: move the polygon skeleton directly, bounded to the same
+                    // Corner joint: move the corner position directly, bounded to the same
                     // coordinate range the inspector allows. Without the bound an extreme drag
                     // can grow the sampled path until it breaks rendering or the sampler, which
                     // makes the handles appear to vanish.
                     auto& polygon       = node.polygon;
-                    const Vec2 previous = polygon.vertices[editor.drag_handle_index];
+                    const Vec2 previous = polygon.corner_positions[editor.drag_handle_index];
                     Vec2 next           = snap ? Vec2{std::round(local.x), std::round(local.y)} : local;
                     if (!std::isfinite(next.x) || !std::isfinite(next.y)) next = previous;
                     next.x = std::clamp(next.x, kMinNodeCoordinate, kMaxNodeCoordinate);
                     next.y = std::clamp(next.y, kMinNodeCoordinate, kMaxNodeCoordinate);
-                    polygon.vertices[editor.drag_handle_index] = next;
-                    commit_or_restore([&] { polygon.vertices[editor.drag_handle_index] = previous; });
+                    polygon.corner_positions[editor.drag_handle_index] = next;
+                    commit_or_restore([&] { polygon.corner_positions[editor.drag_handle_index] = previous; });
                 } else if (editor.drag_handle_kind <= 1) {
                     // Edge handle. The "in" control sits at edge.start + normalize(dir +
                     // outward*bulge)*(start*L); the "out" control sits at edge.end -
@@ -449,22 +451,22 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
                         });
                     }
                 } else {
-                    // Corner handle: first_control = vertex + d * (u_prev + t_end * c) and
-                    // second_control = vertex + d * (u_next - t_start * c), with
+                    // Corner tip: first_control = joint + d * (u_prev + t_end * c) and
+                    // second_control = joint + d * (u_next - t_start * c), with
                     // d = min_neighbour_length * roundness. Solving the 2x2 system recovers
                     // both roundness and cap_tension, so the tip follows the cursor exactly
                     // while corner tangent authority is preserved.
-                    const bool first_side   = editor.drag_handle_kind == 2;
-                    const auto& corner      = handle_sample.corners[editor.drag_handle_index];
-                    const Vec2 vertex       = parameters.vertices[editor.drag_handle_index];
-                    const size_t count      = parameters.vertex_count;
-                    const Vec2 previous     = parameters.vertices[(editor.drag_handle_index + count - 1) % count];
-                    const Vec2 following    = parameters.vertices[(editor.drag_handle_index + 1) % count];
-                    const float neighbour   = std::min(vlen(vsub(previous, vertex)), vlen(vsub(following, vertex)));
-                    const Vec2 u            = vnorm(vsub(first_side ? corner.start : corner.end, vertex));
-                    const Vec2 t            = vnorm(first_side ? vsub(corner.first_control, corner.start)
-                                                               : vsub(corner.end, corner.second_control));
-                    const Vec2 target       = vsub(local, vertex);
+                    const bool first_side = editor.drag_handle_kind == 2;
+                    const auto& corner    = handle_sample.corners[editor.drag_handle_index];
+                    const Vec2 joint      = parameters.corner_positions[editor.drag_handle_index];
+                    const size_t count    = parameters.corner_count;
+                    const Vec2 previous   = parameters.corner_positions[(editor.drag_handle_index + count - 1) % count];
+                    const Vec2 following  = parameters.corner_positions[(editor.drag_handle_index + 1) % count];
+                    const float neighbour = std::min(vlen(vsub(previous, joint)), vlen(vsub(following, joint)));
+                    const Vec2 u          = vnorm(vsub(first_side ? corner.start : corner.end, joint));
+                    const Vec2 t          = vnorm(first_side ? vsub(corner.first_control, corner.start)
+                                                             : vsub(corner.end, corner.second_control));
+                    const Vec2 target     = vsub(local, joint);
                     const float determinant = vcross(u, t);
                     if (neighbour > 1e-4f && std::fabs(determinant) > 1e-5f) {
                         const float distance = vcross(target, t) / determinant;
@@ -555,7 +557,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
                 changed            = true;
                 editor.status      = "Reset corner handle " + std::to_string(handle.index);
             } else {
-                editor.status = "Vertex position has no default; drag or edit it in the inspector";
+                editor.status = "Corner position has no default; drag or edit it in the inspector";
             }
         }
     }
@@ -565,7 +567,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
     ImGui::EndChild();
     ImGui::TextDisabled("320 x 240 · %s · middle-drag pan · wheel zoom · shift snaps", zoom_label);
     ImGui::SameLine();
-    ImGui::TextDisabled("| blue vertex · magenta edge handle · cyan corner tip · right-click resets a handle");
+    ImGui::TextDisabled("| blue corner joint · cyan corner tip · magenta edge handle · right-click resets a handle");
     if (editor.motion.playing) {
         ImGui::TextDisabled("| handles hidden while the preview clock runs — pause to edit");
     } else if (handle_tip[0] != '\0') {

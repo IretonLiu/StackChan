@@ -30,8 +30,8 @@ Node makeNode(const SceneDoc& document, Kind kind)
     Node node;
     node.id   = (kind == Kind::Circle ? "circle-" : "polygon-") + std::to_string(uniqueNodeNumber(document, kind));
     node.kind = kind;
-    node.polygon.vertex_count = 3;
-    node.polygon.vertices     = {{{-30, 20}, {0, -35}, {30, 20}}};
+    node.polygon.corner_count     = 3;
+    node.polygon.corner_positions = {{{-30, 20}, {0, -35}, {30, 20}}};
     return node;
 }
 

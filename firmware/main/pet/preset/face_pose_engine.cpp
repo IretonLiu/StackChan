@@ -70,44 +70,44 @@ bool locateChannel(FacePresetEvaluation& evaluation, uint8_t node_index, FacePos
             value = &node.circle.radius;
             range = kRadiusRange;
             return true;
-        case FacePoseChannel::PolygonVertexX:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+        case FacePoseChannel::PolygonCornerX:
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
-            value = &node.rounded_polygon.vertices[element_index].x;
+            value = &node.rounded_polygon.corner_positions[element_index].x;
             range = kCoordinateRange;
             return true;
-        case FacePoseChannel::PolygonVertexY:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+        case FacePoseChannel::PolygonCornerY:
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
-            value = &node.rounded_polygon.vertices[element_index].y;
+            value = &node.rounded_polygon.corner_positions[element_index].y;
             range = kCoordinateRange;
             return true;
         case FacePoseChannel::PolygonCornerRoundness:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
             value = &node.rounded_polygon.corners[element_index].roundness;
             range = {shape::kMinCornerRoundness, shape::kMaxCornerRoundness};
             return true;
         case FacePoseChannel::PolygonCornerCapTension:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
             value = &node.rounded_polygon.corners[element_index].cap_tension;
             range = {shape::kMinCapTension, shape::kMaxCapTension};
             return true;
         case FacePoseChannel::PolygonEdgeBulge:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
             value = &node.rounded_polygon.edges[element_index].bulge;
             range = {-shape::kMaxEdgeBulge, shape::kMaxEdgeBulge};
             return true;
         case FacePoseChannel::PolygonEdgeStart:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
             value = &node.rounded_polygon.edges[element_index].start;
             range = {shape::kMinEdgeHandle, shape::kMaxEdgeHandle};
             return true;
         case FacePoseChannel::PolygonEdgeEnd:
-            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.vertex_count)
+            if (node.kind != ShapeKind::RoundedPolygon || element_index >= node.rounded_polygon.corner_count)
                 return false;
             value = &node.rounded_polygon.edges[element_index].end;
             range = {shape::kMinEdgeHandle, shape::kMaxEdgeHandle};

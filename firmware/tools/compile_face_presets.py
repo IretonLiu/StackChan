@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 MAX_NODES = 16
-MAX_POLYGON_VERTICES = 5
+MAX_POLYGON_CORNERS = 5
 MAX_POSES = 8
 MAX_POSE_TARGETS = 32
 MAX_CXX_FLOAT = 3.4028234663852886e38
@@ -28,8 +28,8 @@ POSE_CHANNELS = {
     "circle.center_x": ("CircleCenterX", "circle", False, -4096, 4096),
     "circle.center_y": ("CircleCenterY", "circle", False, -4096, 4096),
     "circle.radius": ("CircleRadius", "circle", False, .01, 4096),
-    "rounded_polygon.vertex_x": ("PolygonVertexX", "rounded_polygon", True, -4096, 4096),
-    "rounded_polygon.vertex_y": ("PolygonVertexY", "rounded_polygon", True, -4096, 4096),
+    "rounded_polygon.corner_x": ("PolygonCornerX", "rounded_polygon", True, -4096, 4096),
+    "rounded_polygon.corner_y": ("PolygonCornerY", "rounded_polygon", True, -4096, 4096),
     "rounded_polygon.corner_roundness": ("PolygonCornerRoundness", "rounded_polygon", True, 0, .35),
     "rounded_polygon.corner_cap_tension": ("PolygonCornerCapTension", "rounded_polygon", True, .10, .90),
     "rounded_polygon.edge_bulge": ("PolygonEdgeBulge", "rounded_polygon", True, -.35, .35),
@@ -162,40 +162,50 @@ def parse_motion(value, where):
     return result
 
 def parse_polygon(value, where):
+    """A rounded polygon is a ring of corners joined by edges.
+
+    A corner is the smallest primitive: it carries its joint position plus the
+    rounding and cap tension of the patch. Vertices are derived from the joint
+    positions and are not authored. The edge at index i joins corner i to corner
+    (i + 1) % count.
+    """
     value = obj(value, where)
-    require_keys(value, {"vertices", "corners", "edges"}, where)
-    vertices = value.get("vertices")
-    if not isinstance(vertices, list) or not 3 <= len(vertices) <= MAX_POLYGON_VERTICES:
-        fail(where + ".vertices", f"must contain 3..{MAX_POLYGON_VERTICES} points")
-    vertices = [point(vertex, f"{where}.vertices[{index}]") for index, vertex in enumerate(vertices)]
-    turns = [cross(vertices[index - 1], vertices[index], vertices[(index + 1) % len(vertices)])
-             for index in range(len(vertices))]
-    if any(abs(turn) < 0.0001 for turn in turns) or any(turns[0] * turn <= 0 for turn in turns[1:]):
-        fail(where + ".vertices", "must be a non-degenerate convex polygon with consistent winding")
-    corners, edges = value.get("corners"), value.get("edges")
-    if not isinstance(corners, list) or len(corners) != len(vertices):
-        fail(where + ".corners", "must have one entry per vertex")
-    if not isinstance(edges, list) or len(edges) != len(vertices):
-        fail(where + ".edges", "must have one entry per vertex")
-    parsed_corners, parsed_edges = [], []
+    require_keys(value, {"corners", "edges"}, where)
+    corners = value.get("corners")
+    if not isinstance(corners, list) or not 3 <= len(corners) <= MAX_POLYGON_CORNERS:
+        fail(where + ".corners", f"must contain 3..{MAX_POLYGON_CORNERS} corners")
+    positions, parsed_corners = [], []
     for index, raw in enumerate(corners):
-        raw = obj(raw, f"{where}.corners[{index}]")
-        require_keys(raw, {"roundness", "cap_tension"}, f"{where}.corners[{index}]")
-        result = (number(raw.get("roundness", .08), f"{where}.corners[{index}].roundness"),
-                  number(raw.get("cap_tension", .55), f"{where}.corners[{index}].cap_tension"))
+        corner_where = f"{where}.corners[{index}]"
+        raw = obj(raw, corner_where)
+        require_keys(raw, {"position", "roundness", "cap_tension"}, corner_where)
+        if raw.get("position") is None:
+            fail(corner_where + ".position", "is required")
+        positions.append(point(raw.get("position"), corner_where + ".position"))
+        result = (number(raw.get("roundness", .08), corner_where + ".roundness"),
+                  number(raw.get("cap_tension", .55), corner_where + ".cap_tension"))
         if not 0 <= result[0] <= .35 or not .10 <= result[1] <= .90:
-            fail(f"{where}.corners[{index}]", "outside firmware-safe range")
+            fail(corner_where, "outside firmware-safe range")
         parsed_corners.append(result)
+    turns = [cross(positions[index - 1], positions[index], positions[(index + 1) % len(positions)])
+             for index in range(len(positions))]
+    if any(abs(turn) < 0.0001 for turn in turns) or any(turns[0] * turn <= 0 for turn in turns[1:]):
+        fail(where + ".corners", "positions must form a non-degenerate convex polygon with consistent winding")
+    edges = value.get("edges")
+    if not isinstance(edges, list) or len(edges) != len(positions):
+        fail(where + ".edges", "must have one entry per corner")
+    parsed_edges = []
     for index, raw in enumerate(edges):
-        raw = obj(raw, f"{where}.edges[{index}]")
-        require_keys(raw, {"bulge", "start", "end"}, f"{where}.edges[{index}]")
-        result = (number(raw.get("bulge", 0), f"{where}.edges[{index}].bulge"),
-                  number(raw.get("start", .28), f"{where}.edges[{index}].start"),
-                  number(raw.get("end", .28), f"{where}.edges[{index}].end"))
+        edge_where = f"{where}.edges[{index}]"
+        raw = obj(raw, edge_where)
+        require_keys(raw, {"bulge", "start", "end"}, edge_where)
+        result = (number(raw.get("bulge", 0), edge_where + ".bulge"),
+                  number(raw.get("start", .28), edge_where + ".start"),
+                  number(raw.get("end", .28), edge_where + ".end"))
         if not -.35 <= result[0] <= .35 or not .08 <= result[1] <= .45 or not .08 <= result[2] <= .45:
-            fail(f"{where}.edges[{index}]", "outside firmware-safe range")
+            fail(edge_where, "outside firmware-safe range")
         parsed_edges.append(result)
-    return vertices, parsed_corners, parsed_edges
+    return positions, parsed_corners, parsed_edges
 
 
 def parse_response(value, where):
@@ -222,8 +232,8 @@ def parse_poses(value, nodes, where):
         fail(where, f"must contain at most {MAX_POSES} poses")
     node_indices = {node["id"]: index for index, node in enumerate(nodes)}
     # Base geometry is identical for every pose; build it once and copy per pose so a
-    # vertex target in one pose cannot leak into the next pose's convexity check.
-    base_polygon_vertices = [[[point[0], point[1]] for point in node.get("polygon", ([], [], []))[0]] for node in nodes]
+    # corner-joint target in one pose cannot leak into the next pose's convexity check.
+    base_polygon_positions = [[[point[0], point[1]] for point in node.get("polygon", ([], [], []))[0]] for node in nodes]
     seen, poses = set(), []
     for pose_index, raw_pose in enumerate(value):
         pose_where = f"{where}[{pose_index}]"
@@ -237,7 +247,7 @@ def parse_poses(value, nodes, where):
         if not isinstance(targets, list) or len(targets) > MAX_POSE_TARGETS:
             fail(pose_where + ".targets", f"must contain at most {MAX_POSE_TARGETS} targets")
         parsed_targets, seen_channels = [], set()
-        polygon_vertices = [[[point[0], point[1]] for point in vertices] for vertices in base_polygon_vertices]
+        polygon_positions = [[[point[0], point[1]] for point in positions] for positions in base_polygon_positions]
         for target_index, raw_target in enumerate(targets):
             target_where = f"{pose_where}.targets[{target_index}]"
             raw_target = obj(raw_target, target_where)
@@ -260,7 +270,7 @@ def parse_poses(value, nodes, where):
                 if "element" not in raw_target:
                     fail(target_where + ".element", "is required for polygon controls")
                 if element >= len(node["polygon"][0]):
-                    fail(target_where + ".element", "must name an existing polygon vertex")
+                    fail(target_where + ".element", "must name an existing polygon corner")
             elif element != 0:
                 fail(target_where + ".element", "must be zero for this channel")
             target_value = number(raw_target.get("value"), target_where + ".value")
@@ -270,10 +280,10 @@ def parse_poses(value, nodes, where):
             if key in seen_channels:
                 fail(target_where, "duplicates another target channel in this pose")
             seen_channels.add(key)
-            if channel_name == "rounded_polygon.vertex_x":
-                polygon_vertices[node_index][element][0] = target_value
-            elif channel_name == "rounded_polygon.vertex_y":
-                polygon_vertices[node_index][element][1] = target_value
+            if channel_name == "rounded_polygon.corner_x":
+                polygon_positions[node_index][element][0] = target_value
+            elif channel_name == "rounded_polygon.corner_y":
+                polygon_positions[node_index][element][1] = target_value
             parsed_targets.append({"node_index": node_index, "enum_name": enum_name, "element": element,
                                    "value": target_value, "response": parse_response(raw_target.get("response"), target_where + ".response")})
         # A pose cannot compile a non-convex end-state; the runtime also checks
@@ -281,9 +291,9 @@ def parse_poses(value, nodes, where):
         for node_index, node in enumerate(nodes):
             if node["kind"] != "rounded_polygon":
                 continue
-            vertices = polygon_vertices[node_index]
-            turns = [cross(vertices[index - 1], vertices[index], vertices[(index + 1) % len(vertices)])
-                     for index in range(len(vertices))]
+            positions = polygon_positions[node_index]
+            turns = [cross(positions[index - 1], positions[index], positions[(index + 1) % len(positions)])
+                     for index in range(len(positions))]
             if any(abs(turn) < 0.0001 for turn in turns) or any(turns[0] * turn <= 0 for turn in turns[1:]):
                 fail(pose_where + ".targets", "must preserve a non-degenerate convex polygon with consistent winding")
         poses.append({"id": pose_id, "targets": parsed_targets})
@@ -360,11 +370,11 @@ def emit(scenes, output):
                 center, radius = node["circle"]
                 lines.append(prefix + "{" + v(center) + ", " + f(radius) + "}, {}, " + motion_str + "},")
             else:
-                vertices, corners, edges = node["polygon"]
-                vs = ", ".join(v(x) for x in vertices)
+                positions, corners, edges = node["polygon"]
+                ps = ", ".join(v(x) for x in positions)
                 cs = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + "}" for x in corners)
                 es = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + ", " + f(x[2]) + "}" for x in edges)
-                lines.append(prefix + "{}, {" + str(len(vertices)) + ", {{" + vs + "}}, {{" + cs + "}}, {{" + es + "}}}, " + motion_str + "},")
+                lines.append(prefix + "{}, {" + str(len(positions)) + ", {{" + ps + "}}, {{" + cs + "}}, {{" + es + "}}}, " + motion_str + "},")
         lines += ["};"]
         poses = scene["poses"]
         for pose in poses:

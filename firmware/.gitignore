@@ -67,3 +67,7 @@ sdkconfig.old
 sdkconfig.defaults.local
 
 xiaozhi-esp32/
+
+# Python bytecode
+tools/__pycache__/
+*.pyc

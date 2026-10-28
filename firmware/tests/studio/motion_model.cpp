@@ -81,10 +81,10 @@ float* resolveMotionTarget(Node& node, MotionProperty property, pet::preset::Mot
         case MotionProperty::CircleRadius:
             return &node.circle.radius;
         case MotionProperty::CornerRoundness:
-            if (node.polygon.vertex_count == 0) return nullptr;
+            if (node.polygon.corner_count == 0) return nullptr;
             return &node.polygon.corners[0].roundness;
         case MotionProperty::EdgeBulge:
-            if (node.polygon.vertex_count == 0) return nullptr;
+            if (node.polygon.corner_count == 0) return nullptr;
             return &node.polygon.edges[0].bulge;
     }
     return nullptr;

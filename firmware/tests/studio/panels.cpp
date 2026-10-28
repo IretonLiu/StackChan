@@ -137,9 +137,9 @@ void toolbar(SceneDoc& document, EditorState& editor, History& history, ToolbarC
     ImGui::SameLine();
     ImGui::Checkbox("Guides", &editor.show_guides);
     ImGui::SameLine();
-    ImGui::Checkbox("Vertices", &editor.show_vertices);
+    ImGui::Checkbox("Corners", &editor.show_corners);
     ImGui::SameLine();
-    ImGui::Checkbox("Bezier controls", &editor.show_bezier_controls);
+    ImGui::Checkbox("Edges", &editor.show_edges);
 }
 
 bool scenePanel(SceneDoc& document, EditorState& editor)
@@ -262,15 +262,43 @@ bool inspector(SceneDoc& document, EditorState& editor)
         changed |= pointField("Center", n.circle.center, {160.0f, 120.0f}, .5f);
         changed |= floatField("Radius", n.circle.radius, 1.0f, 160.0f, 20.0f, .2f);
     } else {
-        int count = n.polygon.vertex_count;
+        int count = n.polygon.corner_count;
         ImGui::SetNextItemWidth(120.0f);
-        if (ImGui::SliderInt("Vertices", &count, 3, int(kMaxRoundedPolygonVertices))) {
-            n.polygon.vertex_count = uint8_t(count);
+        if (ImGui::SliderInt("Corners", &count, 3, int(kMaxRoundedPolygonCorners))) {
+            if (count > n.polygon.corner_count) {
+                // Growing the ring splits the closing edge. The new joint is pushed away
+                // from the centroid so it is a real corner, not a collinear (degenerate)
+                // point that the validator would reject.
+                Vec2 centroid{};
+                for (int i = 0; i < n.polygon.corner_count; ++i) {
+                    centroid.x += n.polygon.corner_positions[i].x;
+                    centroid.y += n.polygon.corner_positions[i].y;
+                }
+                centroid.x /= float(n.polygon.corner_count);
+                centroid.y /= float(n.polygon.corner_count);
+                for (int i = n.polygon.corner_count; i < count; ++i) {
+                    const Vec2& end   = n.polygon.corner_positions[i - 1];
+                    const Vec2& start = n.polygon.corner_positions[0];
+                    Vec2 middle{(end.x + start.x) * 0.5f, (end.y + start.y) * 0.5f};
+                    Vec2 away{middle.x - centroid.x, middle.y - centroid.y};
+                    const float away_length = std::sqrt(away.x * away.x + away.y * away.y);
+                    const float edge_length =
+                        std::sqrt((start.x - end.x) * (start.x - end.x) + (start.y - end.y) * (start.y - end.y));
+                    if (away_length > 1e-4f) {
+                        middle.x += away.x / away_length * edge_length * 0.15f;
+                        middle.y += away.y / away_length * edge_length * 0.15f;
+                    }
+                    n.polygon.corner_positions[i] = middle;
+                    n.polygon.corners[i]          = {kDefaultCornerRoundness, kDefaultCapTension};
+                    n.polygon.edges[i]            = {kDefaultEdgeBulge, kDefaultEdgeHandle, kDefaultEdgeHandle};
+                }
+            }
+            n.polygon.corner_count = uint8_t(count);
             changed                = true;
         }
-        if (ImGui::BeginCombo("Ear preset", "Apply to shape")) {
+        if (ImGui::BeginCombo("Shape preset", "Apply to shape")) {
             if (ImGui::Selectable("Neutral")) {
-                for (int i = 0; i < n.polygon.vertex_count; ++i) {
+                for (int i = 0; i < n.polygon.corner_count; ++i) {
                     n.polygon.corners[i].roundness   = .08f;
                     n.polygon.corners[i].cap_tension = .55f;
                     n.polygon.edges[i].bulge         = 0.0f;
@@ -280,14 +308,14 @@ bool inspector(SceneDoc& document, EditorState& editor)
                 changed = true;
             }
             if (ImGui::Selectable("Pointed")) {
-                for (int i = 0; i < n.polygon.vertex_count; ++i) {
+                for (int i = 0; i < n.polygon.corner_count; ++i) {
                     n.polygon.corners[i].roundness   = 0.0f;
                     n.polygon.corners[i].cap_tension = .70f;
                 }
                 changed = true;
             }
             if (ImGui::Selectable("Rounded")) {
-                for (int i = 0; i < n.polygon.vertex_count; ++i) {
+                for (int i = 0; i < n.polygon.corner_count; ++i) {
                     n.polygon.corners[i].roundness   = .30f;
                     n.polygon.corners[i].cap_tension = .45f;
                 }
@@ -297,13 +325,14 @@ bool inspector(SceneDoc& document, EditorState& editor)
         }
         for (int i = 0; i < count; ++i) {
             ImGui::PushID(i);
-            ImGui::SeparatorText(("Vertex " + std::to_string(i)).c_str());
-            changed |= pointField("Position", n.polygon.vertices[i], {}, .5f);
+            ImGui::SeparatorText(("Corner " + std::to_string(i)).c_str());
+            changed |= pointField("Position", n.polygon.corner_positions[i], {}, .5f);
             changed |= floatField("Roundness", n.polygon.corners[i].roundness, 0.0f, .35f, .08f, .005f, "%.3f");
             changed |= floatField("Cap tension", n.polygon.corners[i].cap_tension, .10f, .90f, .55f, .005f, "%.3f");
-            changed |= floatField("Edge bulge", n.polygon.edges[i].bulge, -.35f, .35f, 0.0f, .005f, "%.3f");
-            changed |= floatField("Edge in", n.polygon.edges[i].start, .08f, .45f, .28f, .005f, "%.3f");
-            changed |= floatField("Edge out", n.polygon.edges[i].end, .08f, .45f, .28f, .005f, "%.3f");
+            ImGui::SeparatorText(("Edge " + std::to_string(i)).c_str());
+            changed |= floatField("Bulge", n.polygon.edges[i].bulge, -.35f, .35f, 0.0f, .005f, "%.3f");
+            changed |= floatField("Start", n.polygon.edges[i].start, .08f, .45f, .28f, .005f, "%.3f");
+            changed |= floatField("End", n.polygon.edges[i].end, .08f, .45f, .28f, .005f, "%.3f");
             ImGui::PopID();
         }
     }
