@@ -265,36 +265,11 @@ bool inspector(SceneDoc& document, EditorState& editor)
         int count = n.polygon.corner_count;
         ImGui::SetNextItemWidth(120.0f);
         if (ImGui::SliderInt("Corners", &count, 3, int(kMaxRoundedPolygonCorners))) {
-            if (count > n.polygon.corner_count) {
-                // Growing the ring splits the closing edge. The new joint is pushed away
-                // from the centroid so it is a real corner, not a collinear (degenerate)
-                // point that the validator would reject.
-                Vec2 centroid{};
-                for (int i = 0; i < n.polygon.corner_count; ++i) {
-                    centroid.x += n.polygon.corner_positions[i].x;
-                    centroid.y += n.polygon.corner_positions[i].y;
-                }
-                centroid.x /= float(n.polygon.corner_count);
-                centroid.y /= float(n.polygon.corner_count);
-                for (int i = n.polygon.corner_count; i < count; ++i) {
-                    const Vec2& end   = n.polygon.corner_positions[i - 1];
-                    const Vec2& start = n.polygon.corner_positions[0];
-                    Vec2 middle{(end.x + start.x) * 0.5f, (end.y + start.y) * 0.5f};
-                    Vec2 away{middle.x - centroid.x, middle.y - centroid.y};
-                    const float away_length = std::sqrt(away.x * away.x + away.y * away.y);
-                    const float edge_length =
-                        std::sqrt((start.x - end.x) * (start.x - end.x) + (start.y - end.y) * (start.y - end.y));
-                    if (away_length > 1e-4f) {
-                        middle.x += away.x / away_length * edge_length * 0.15f;
-                        middle.y += away.y / away_length * edge_length * 0.15f;
-                    }
-                    n.polygon.corner_positions[i] = middle;
-                    n.polygon.corners[i]          = {kDefaultCornerRoundness, kDefaultCapTension};
-                    n.polygon.edges[i]            = {kDefaultEdgeBulge, kDefaultEdgeHandle, kDefaultEdgeHandle};
-                }
-            }
-            n.polygon.corner_count = uint8_t(count);
-            changed                = true;
+            std::string error;
+            if (setCornerCount(document, size_t(editor.selection), uint8_t(count), error))
+                changed = true;
+            else
+                editor.status = error;
         }
         if (ImGui::BeginCombo("Shape preset", "Apply to shape")) {
             if (ImGui::Selectable("Neutral")) {

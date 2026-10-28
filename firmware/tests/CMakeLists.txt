@@ -222,6 +222,9 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
     set_tests_properties(kiwi_studio_reject_unknown_field PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME kiwi_studio_corner_growth
+        COMMAND $<TARGET_FILE:kiwi_studio> --selftest)
+
     add_test(NAME kiwi_studio_reject_empty_nodes
         COMMAND $<TARGET_FILE:kiwi_studio> --validate
                 ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/empty.petface.json

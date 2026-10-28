@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <utility>
 
 namespace kiwi::studio {
@@ -33,6 +34,55 @@ Node makeNode(const SceneDoc& document, Kind kind)
     node.polygon.corner_count     = 3;
     node.polygon.corner_positions = {{{-30, 20}, {0, -35}, {30, 20}}};
     return node;
+}
+
+bool setCornerCount(SceneDoc& document, size_t node_index, uint8_t count, std::string& error)
+{
+    error.clear();
+    if (node_index >= document.count) {
+        error = "Node index is out of range";
+        return false;
+    }
+    Node& node = document.nodes[node_index];
+    if (node.kind != Kind::Polygon) {
+        error = "Only rounded polygons have corners";
+        return false;
+    }
+    if (count < 3 || count > pet::shape::kMaxRoundedPolygonCorners) {
+        error = "Corner count must be 3.." + std::to_string(pet::shape::kMaxRoundedPolygonCorners);
+        return false;
+    }
+    if (count > node.polygon.corner_count) {
+        // Grow the ring by splitting the closing edge. The new joint is pushed away from
+        // the centroid so it is a real corner, not a collinear (degenerate) point that the
+        // validator and sampler would reject.
+        Vec2 centroid{};
+        for (uint8_t index = 0; index < node.polygon.corner_count; ++index) {
+            centroid.x += node.polygon.corner_positions[index].x;
+            centroid.y += node.polygon.corner_positions[index].y;
+        }
+        centroid.x /= float(node.polygon.corner_count);
+        centroid.y /= float(node.polygon.corner_count);
+        for (uint8_t index = node.polygon.corner_count; index < count; ++index) {
+            const Vec2& end   = node.polygon.corner_positions[index - 1];
+            const Vec2& start = node.polygon.corner_positions[0];
+            Vec2 middle{(end.x + start.x) * 0.5f, (end.y + start.y) * 0.5f};
+            Vec2 away{middle.x - centroid.x, middle.y - centroid.y};
+            const float away_length = std::sqrt(away.x * away.x + away.y * away.y);
+            const float edge_length =
+                std::sqrt((start.x - end.x) * (start.x - end.x) + (start.y - end.y) * (start.y - end.y));
+            if (away_length > 1e-4f) {
+                middle.x += away.x / away_length * edge_length * 0.15f;
+                middle.y += away.y / away_length * edge_length * 0.15f;
+            }
+            node.polygon.corner_positions[index] = middle;
+            node.polygon.corners[index] = {pet::shape::kDefaultCornerRoundness, pet::shape::kDefaultCapTension};
+            node.polygon.edges[index]   = {pet::shape::kDefaultEdgeBulge, pet::shape::kDefaultEdgeHandle,
+                                           pet::shape::kDefaultEdgeHandle};
+        }
+    }
+    node.polygon.corner_count = count;
+    return true;
 }
 
 void resetScene(SceneDoc& document)

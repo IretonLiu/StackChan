@@ -14,6 +14,9 @@ int uniqueNodeNumber(const SceneDoc& document, Kind kind);
 
 Node makeNode(const SceneDoc& document, Kind kind);
 
+/** Sets a polygon's corner count, growing the ring with real (non-degenerate) corners. */
+bool setCornerCount(SceneDoc& document, size_t node_index, uint8_t count, std::string& error);
+
 /** Builds the default four-node cat scene. */
 void resetScene(SceneDoc& document);
 

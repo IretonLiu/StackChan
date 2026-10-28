@@ -23,8 +23,45 @@ using namespace kiwi::studio;
 
 int runCli(int argc, char** argv)
 {
-    if (argc < 3) return -1;
+    if (argc < 2) return -1;
     const std::string mode = argv[1];
+    if (mode == "--selftest") {
+        // Headless check of the document growth path the inspector uses.
+        SceneDoc scene;
+        resetScene(scene);
+        int failures = 0;
+        for (size_t index = 0; index < scene.count; ++index) {
+            if (scene.nodes[index].kind != Kind::Polygon) continue;
+            for (const uint8_t target : {uint8_t(4), uint8_t(5)}) {
+                SceneDoc trial = scene;
+                std::string error;
+                if (!setCornerCount(trial, index, target, error)) {
+                    printf("selftest: grow node %zu to %u failed: %s\n", index, target, error.c_str());
+                    ++failures;
+                    continue;
+                }
+                Problem problem;
+                if (!validateScene(trial, problem)) {
+                    printf("selftest: validate node %zu at %u failed: %s\n", index, target,
+                           problem.formatted().c_str());
+                    ++failures;
+                    continue;
+                }
+                pet::shape::RoundedPolygonSample sample;
+                if (!pet::shape::sampleRoundedPolygon(trial.nodes[index].polygon,
+                                                      pet::shape::makeAffine(trial.nodes[index].transform), sample,
+                                                      trial.nodes[index].style)) {
+                    printf("selftest: sample node %zu at %u failed\n", index, target);
+                    ++failures;
+                    continue;
+                }
+                printf("selftest: node %zu at %u corners ok (%u path commands)\n", index, target,
+                       sample.path.command_count);
+            }
+        }
+        return failures == 0 ? 0 : 2;
+    }
+    if (argc < 3) return -1;
     if (mode != "--validate" && mode != "--roundtrip" && mode != "--export-svg") return -1;
     SceneDoc document;
     std::string error;

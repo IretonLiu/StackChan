@@ -35,6 +35,25 @@ private:
     pet::preset::FacePresetEvaluation _preset_evaluation{};
     pet::preset::FaceAnimationRuntime _animation_runtime{};
     pet::face::FaceDrawing _preset_drawing{};
+    struct FaceDiagnostics {
+        uint32_t started_ms       = 0;
+        uint32_t frames           = 0;
+        uint32_t renders          = 0;
+        uint32_t tick_ms          = 0;
+        uint32_t max_tick_ms      = 0;
+        uint32_t failures         = 0;
+        uint32_t evaluate_us      = 0;
+        uint32_t advance_us       = 0;
+        uint32_t build_us         = 0;
+        uint32_t lock_us          = 0;
+        uint32_t render_us        = 0;
+        uint32_t max_evaluate_us  = 0;
+        uint32_t max_advance_us   = 0;
+        uint32_t max_build_us     = 0;
+        uint32_t max_lock_us      = 0;
+        uint32_t max_render_us    = 0;
+    };
+    FaceDiagnostics _face_diagnostics{};
     uint32_t _last_stackchan_update_ms = 0;
     uint32_t _last_face_update_ms      = 0;
     uint32_t _last_face_error_ms       = 0;

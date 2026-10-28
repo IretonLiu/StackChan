@@ -30,7 +30,9 @@ Data-bus window only, measured with `heap_caps_print_heap_info()`:
 | `0x3FCB1B08` | 64.0 KiB | 63.2 KiB | DMA pool reserved by PSRAM support for internal-cap DMA |
 | `0x600FE000` | 8.0 KiB | 7.8 KiB | RTC RAM |
 
-Totals: **246.8 KiB free / 152.1 KiB allocated**.
+Runtime snapshot after opening the procedural face: **246,731 B free**; the
+minimum observed during animated rendering was **241,999 B**. The largest
+contiguous internal block remained **135,168 B**.
 
 Not in the heap, from `idf.py size`:
 
@@ -40,15 +42,16 @@ Not in the heap, from `idf.py size`:
 | `.data` | 14,512 |
 | `.bss` | 14,440 |
 | `.vectors` | 1,028 |
-| Flash `.text` | 837,360 |
-| Flash `.rodata` | 578,744 |
+| Flash `.text` | 846,836 |
+| Flash `.rodata` | 581,804 |
 
 DIRAM total is 341,760 B; static usage is 35% of it.
 
 ## PSRAM (the plentiful pool)
 
 One pool at `0x3C16_0000` (it starts after the flash DROM mapping window):
-8 MiB, **7.74 MiB free**, 628 KiB allocated.
+8 MiB, **7,737,160 B free** (largest block 7,733,248 B). The minimum observed
+during animated rendering was 7,724,856 B; no progressive loss was observed.
 
 - Face canvas: 300 KiB, ARGB8888 320x240, allocated once and reused.
 - LVGL image cache: 2 MiB reserved by the display bring-up, committed lazily.
@@ -65,7 +68,7 @@ in internal SRAM.
 | `0x009000` | nvs | 16 KiB | |
 | `0x00D000` | otadata | 8 KiB | |
 | `0x00F000` | phy_init | 4 KiB | |
-| `0x020000` | ota_0 | 4.94 MiB | app 1.45 MiB, **71% free** |
+| `0x020000` | ota_0 | 4.94 MiB | app 1,533,411 B, **70% free** |
 | `0x510000` | ota_1 | 4.94 MiB | empty OTA slot |
 | `0xA00000` | assets | 4 MiB | unused while `CONFIG_FLASH_NONE_ASSETS=y` |
 | `0xE00000` | coredump | 64 KiB | |
@@ -105,14 +108,23 @@ Consequences:
 
 ## Frame budget
 
-Measured per frame in `AppPetBase` with `esp_timer_get_time()` splits:
+Measured on-device with the visible blink plus ±8° procedural ear sway. The
+app's rate-limited telemetry uses `esp_timer_get_time()` around each phase:
 
-| Step | Cost | Notes |
-|---|---|---|
-| Clear dirty rect | ~2 ms | 194x50 ARGB8888 in PSRAM |
-| ThorVG rasterize | ~4.4 ms | roughly constant per frame; canvas create/destroy dominates |
-| **Total render (main task)** | **6.5 ms** | was 25 ms before dirty-rect repaint |
-| Stack peak | 21.1 KiB | inside `lv_canvas_finish_layer` |
+| Step | Average | Maximum | Notes |
+|---|---:|---:|---|
+| Preset evaluation | 0.319 ms | 0.471 ms | Copies the immutable base scene. |
+| Animation advance | 0.814 ms | 1.027 ms | Keyframe/sine resolution and response functions. |
+| Drawing build | 0.704 ms | 1.009 ms | Converts evaluated geometry to renderer paths. |
+| Display-lock wait | 29.9–31.0 ms | 53.5 ms | Waiting for LVGL/display ownership. |
+| Renderer while locked | 12.7 ms | 13.2 ms | Direct canvas update, vector rasterization, and flush. |
+| Face tick | 73 ms | 100 ms | 68 frames in 5.0 s, approximately 13.5 fps. |
+
+The procedural engine costs about 1.1 ms before drawing; it is not the current
+rate limiter. Display ownership plus rendering costs roughly 43–44 ms, and the
+main app's scheduling cadence accounts for the remaining time to the 73 ms
+face tick. The older 6.5 ms dirty-rect figure measured renderer work only and
+must not be treated as end-to-end animation throughput.
 
 Budget rules:
 
