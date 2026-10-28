@@ -431,7 +431,8 @@ def parse_scene(path):
     except (OSError, json.JSONDecodeError) as error:
         raise SchemaError(f"{path}: {error}") from error
     value = obj(value, str(path)); require_keys(value, {"version", "id", "background", "nodes", "poses", "animations"}, str(path))
-    if value.get("version") != 1: fail(str(path) + ".version", "must be 1")
+    # Version 2 dropped nodes[].motion; version 1 scenes without that block remain valid.
+    if value.get("version") not in (1, 2): fail(str(path) + ".version", "must be 1 or 2")
     scene_id = value.get("id")
     if not isinstance(scene_id, str) or not ID.fullmatch(scene_id): fail(str(path) + ".id", "must be a lowercase kebab-case id")
     nodes = value.get("nodes")
@@ -439,6 +440,8 @@ def parse_scene(path):
     seen, parsed = set(), []
     for index, raw in enumerate(nodes):
         where = f"{path}.nodes[{index}]"; raw = obj(raw, where)
+        if "motion" in raw:
+            fail(where + ".motion", "per-node motion was removed in scene version 2; express it as an animation track")
         require_keys(raw, {"id", "kind", "parent", "style", "transform", "circle", "rounded_polygon"}, where)
         node_id, kind = raw.get("id"), raw.get("kind")
         if not isinstance(node_id, str) or not ID.fullmatch(node_id) or node_id in seen: fail(where + ".id", "must be a unique lowercase kebab-case id")

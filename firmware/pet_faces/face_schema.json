@@ -161,7 +161,7 @@
       "range": "edge_handle"
     },
     {
-      "id": "opacity",
+      "id": "style.opacity",
       "enum": "Opacity",
       "kind": null,
       "element": false,

@@ -194,7 +194,7 @@ def render_header(schema):
     ]
     for channel in schema["channels"]:
         lines.append(f"    {channel['enum']},")
-    lines.extend(["};", ""])
+    lines.extend(["};", "", f"inline constexpr uint8_t kFacePoseChannelCount = {len(schema['channels'])};", ""])
 
     append_aligned(
         lines,

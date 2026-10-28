@@ -26,6 +26,8 @@ enum class FacePoseChannel : uint8_t {
     Opacity,
 };
 
+inline constexpr uint8_t kFacePoseChannelCount = 16;
+
 inline constexpr uint8_t kMaxFacePresetNodes     = 16;
 inline constexpr uint8_t kMaxFacePresetPoses     = 8;
 inline constexpr uint8_t kMaxFacePoseTargets     = 32;
