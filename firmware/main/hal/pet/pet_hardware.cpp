@@ -22,7 +22,10 @@ void installInputBridge()
     }
     s_input_bridge_installed = true;
     GetHAL().onHeadPetGesture.connect([](HeadPetGesture gesture) {
-        if (gesture == HeadPetGesture::SwipeForward || gesture == HeadPetGesture::SwipeBackward) {
+        // A normal touch is the immediate pet affordance. Swipes remain valid
+        // too, but requiring one made the first visual response appear inert.
+        if (gesture == HeadPetGesture::Press || gesture == HeadPetGesture::SwipeForward ||
+            gesture == HeadPetGesture::SwipeBackward) {
             s_head_pet.store(true, std::memory_order_release);
         }
     });

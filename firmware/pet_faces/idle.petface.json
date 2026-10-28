@@ -47,6 +47,12 @@
       "id": "left-eye",
       "kind": "rounded_polygon",
       "style": { "color": [248, 245, 237] },
+      "transform": {
+        "translation": [130, 138],
+        "rotation_degrees": 0,
+        "scale": [1, 1],
+        "pivot": [130, 138]
+      },
       "rounded_polygon": {
         "vertices": [[121, 116], [139, 116], [139, 160], [121, 160]],
         "corners": [
@@ -62,6 +68,12 @@
       "id": "right-eye",
       "kind": "rounded_polygon",
       "style": { "color": [248, 245, 237] },
+      "transform": {
+        "translation": [190, 138],
+        "rotation_degrees": 0,
+        "scale": [1, 1],
+        "pivot": [190, 138]
+      },
       "rounded_polygon": {
         "vertices": [[181, 116], [199, 116], [199, 160], [181, 160]],
         "corners": [
@@ -72,6 +84,46 @@
         ],
         "edges": [{}, {}, {}, {}]
       }
+    }
+  ],
+  "poses": [
+    {
+      "id": "idle",
+      "targets": [
+        { "node": "left-ear", "channel": "transform.rotation_degrees", "value": -30 },
+        { "node": "right-ear", "channel": "transform.rotation_degrees", "value": 30 },
+        { "node": "left-eye", "channel": "transform.scale_y", "value": 1 },
+        { "node": "right-eye", "channel": "transform.scale_y", "value": 1 }
+      ]
+    },
+    {
+      "id": "alert",
+      "targets": [
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -12,
+          "response": { "frequency_hz": 4, "damping_ratio": 1 }
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 12,
+          "response": { "frequency_hz": 4, "damping_ratio": 1 }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 1.22,
+          "response": { "frequency_hz": 8, "damping_ratio": 1 }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 1.22,
+          "response": { "frequency_hz": 8, "damping_ratio": 1 }
+        }
+      ]
     }
   ]
 }

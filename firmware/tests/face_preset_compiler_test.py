@@ -22,6 +22,10 @@ def set_circle_radius(scene, radius):
     }
 
 
+def duplicate_pose_target(scene):
+    scene["poses"][0]["targets"].append(dict(scene["poses"][0]["targets"][0]))
+
+
 class FacePresetCompilerTest(unittest.TestCase):
     def compile(self, source, output):
         return subprocess.run([sys.executable, str(COMPILER), str(source), "--output", str(output)],
@@ -34,6 +38,7 @@ class FacePresetCompilerTest(unittest.TestCase):
             result = self.compile(VALID, header)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("k_idle_cat", header.read_text())
+            self.assertIn("k_idle_cat_alert_targets", header.read_text())
             source = directory / "generated_test.cpp"
             source.write_text(f'#include "{header}"\nint main() {{ return 0; }}\n')
             build = subprocess.run(["g++", "-std=c++17", "-I", str(FIRMWARE / "main"), str(source), "-c",
@@ -50,6 +55,8 @@ class FacePresetCompilerTest(unittest.TestCase):
             ("unknown-parent", lambda value: value["nodes"][1].update(parent="not-a-node"), "must name an earlier node"),
             ("overflow", lambda value: set_circle_radius(value, 1e100), "must fit a finite C++ float"),
             ("invalid-style", lambda value: value["nodes"][0].update(style=[]), "must be an object"),
+            ("invalid-pose-channel", lambda value: value["poses"][0]["targets"][0].update(channel="circle.radius"), "requires a circle node"),
+            ("duplicate-pose-channel", duplicate_pose_target, "duplicates another target channel"),
         ]
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)

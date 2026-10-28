@@ -9,8 +9,29 @@ from pathlib import Path
 
 MAX_NODES = 16
 MAX_POLYGON_VERTICES = 5
+MAX_POSES = 8
+MAX_POSE_TARGETS = 32
 MAX_CXX_FLOAT = 3.4028234663852886e38
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
+
+# channel: (generated enum name, required primitive kind, requires element index, minimum, maximum)
+POSE_CHANNELS = {
+    "transform.translation_x": ("TransformTranslationX", None, False, -4096, 4096),
+    "transform.translation_y": ("TransformTranslationY", None, False, -4096, 4096),
+    "transform.rotation_degrees": ("TransformRotationDegrees", None, False, -3600, 3600),
+    "transform.scale_x": ("TransformScaleX", None, False, .01, 16),
+    "transform.scale_y": ("TransformScaleY", None, False, .01, 16),
+    "circle.center_x": ("CircleCenterX", "circle", False, -4096, 4096),
+    "circle.center_y": ("CircleCenterY", "circle", False, -4096, 4096),
+    "circle.radius": ("CircleRadius", "circle", False, .01, 4096),
+    "rounded_polygon.vertex_x": ("PolygonVertexX", "rounded_polygon", True, -4096, 4096),
+    "rounded_polygon.vertex_y": ("PolygonVertexY", "rounded_polygon", True, -4096, 4096),
+    "rounded_polygon.corner_roundness": ("PolygonCornerRoundness", "rounded_polygon", True, 0, .35),
+    "rounded_polygon.corner_cap_tension": ("PolygonCornerCapTension", "rounded_polygon", True, .10, .90),
+    "rounded_polygon.edge_bulge": ("PolygonEdgeBulge", "rounded_polygon", True, -.35, .35),
+    "rounded_polygon.edge_start": ("PolygonEdgeStart", "rounded_polygon", True, .08, .45),
+    "rounded_polygon.edge_end": ("PolygonEdgeEnd", "rounded_polygon", True, .08, .45),
+}
 
 
 class SchemaError(ValueError):
@@ -173,12 +194,104 @@ def parse_polygon(value, where):
     return vertices, parsed_corners, parsed_edges
 
 
+def parse_response(value, where):
+    value = {} if value is None else obj(value, where)
+    require_keys(value, {"frequency_hz", "damping_ratio", "maximum_step_seconds"}, where)
+    result = {
+        "frequency_hz": number(value.get("frequency_hz", 6), where + ".frequency_hz"),
+        "damping_ratio": number(value.get("damping_ratio", 1), where + ".damping_ratio"),
+        "maximum_step_seconds": number(value.get("maximum_step_seconds", 1 / 120), where + ".maximum_step_seconds"),
+    }
+    if not .01 <= result["frequency_hz"] <= 30:
+        fail(where + ".frequency_hz", "must be from 0.01 to 30")
+    if not 0 <= result["damping_ratio"] <= 4:
+        fail(where + ".damping_ratio", "must be from 0 to 4")
+    if not .001 <= result["maximum_step_seconds"] <= .1:
+        fail(where + ".maximum_step_seconds", "must be from 0.001 to 0.1")
+    return result
+
+
+def parse_poses(value, nodes, where):
+    if value is None:
+        return []
+    if not isinstance(value, list) or len(value) > MAX_POSES:
+        fail(where, f"must contain at most {MAX_POSES} poses")
+    node_indices = {node["id"]: index for index, node in enumerate(nodes)}
+    # Base geometry is identical for every pose; build it once and copy per pose so a
+    # vertex target in one pose cannot leak into the next pose's convexity check.
+    base_polygon_vertices = [[[point[0], point[1]] for point in node.get("polygon", ([], [], []))[0]] for node in nodes]
+    seen, poses = set(), []
+    for pose_index, raw_pose in enumerate(value):
+        pose_where = f"{where}[{pose_index}]"
+        raw_pose = obj(raw_pose, pose_where)
+        require_keys(raw_pose, {"id", "targets"}, pose_where)
+        pose_id = raw_pose.get("id")
+        if not isinstance(pose_id, str) or not ID.fullmatch(pose_id) or pose_id in seen:
+            fail(pose_where + ".id", "must be a unique lowercase kebab-case id")
+        seen.add(pose_id)
+        targets = raw_pose.get("targets")
+        if not isinstance(targets, list) or len(targets) > MAX_POSE_TARGETS:
+            fail(pose_where + ".targets", f"must contain at most {MAX_POSE_TARGETS} targets")
+        parsed_targets, seen_channels = [], set()
+        polygon_vertices = [[[point[0], point[1]] for point in vertices] for vertices in base_polygon_vertices]
+        for target_index, raw_target in enumerate(targets):
+            target_where = f"{pose_where}.targets[{target_index}]"
+            raw_target = obj(raw_target, target_where)
+            require_keys(raw_target, {"node", "channel", "element", "value", "response"}, target_where)
+            node_id = raw_target.get("node")
+            if not isinstance(node_id, str) or node_id not in node_indices:
+                fail(target_where + ".node", "must name a scene node")
+            channel_name = raw_target.get("channel")
+            if channel_name not in POSE_CHANNELS:
+                fail(target_where + ".channel", "must name a supported animatable channel")
+            enum_name, expected_kind, needs_element, low, high = POSE_CHANNELS[channel_name]
+            node_index = node_indices[node_id]
+            node = nodes[node_index]
+            if expected_kind is not None and node["kind"] != expected_kind:
+                fail(target_where + ".channel", f"requires a {expected_kind} node")
+            element = raw_target.get("element", 0)
+            if not isinstance(element, int) or isinstance(element, bool) or element < 0:
+                fail(target_where + ".element", "must be a non-negative integer")
+            if needs_element:
+                if "element" not in raw_target:
+                    fail(target_where + ".element", "is required for polygon controls")
+                if element >= len(node["polygon"][0]):
+                    fail(target_where + ".element", "must name an existing polygon vertex")
+            elif element != 0:
+                fail(target_where + ".element", "must be zero for this channel")
+            target_value = number(raw_target.get("value"), target_where + ".value")
+            if not low <= target_value <= high:
+                fail(target_where + ".value", f"must be from {low} to {high}")
+            key = (node_index, channel_name, element)
+            if key in seen_channels:
+                fail(target_where, "duplicates another target channel in this pose")
+            seen_channels.add(key)
+            if channel_name == "rounded_polygon.vertex_x":
+                polygon_vertices[node_index][element][0] = target_value
+            elif channel_name == "rounded_polygon.vertex_y":
+                polygon_vertices[node_index][element][1] = target_value
+            parsed_targets.append({"node_index": node_index, "enum_name": enum_name, "element": element,
+                                   "value": target_value, "response": parse_response(raw_target.get("response"), target_where + ".response")})
+        # A pose cannot compile a non-convex end-state; the runtime also checks
+        # every interpolated state before it reaches the renderer.
+        for node_index, node in enumerate(nodes):
+            if node["kind"] != "rounded_polygon":
+                continue
+            vertices = polygon_vertices[node_index]
+            turns = [cross(vertices[index - 1], vertices[index], vertices[(index + 1) % len(vertices)])
+                     for index in range(len(vertices))]
+            if any(abs(turn) < 0.0001 for turn in turns) or any(turns[0] * turn <= 0 for turn in turns[1:]):
+                fail(pose_where + ".targets", "must preserve a non-degenerate convex polygon with consistent winding")
+        poses.append({"id": pose_id, "targets": parsed_targets})
+    return poses
+
+
 def parse_scene(path):
     try:
         value = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as error:
         raise SchemaError(f"{path}: {error}") from error
-    value = obj(value, str(path)); require_keys(value, {"version", "id", "background", "nodes"}, str(path))
+    value = obj(value, str(path)); require_keys(value, {"version", "id", "background", "nodes", "poses"}, str(path))
     if value.get("version") != 1: fail(str(path) + ".version", "must be 1")
     scene_id = value.get("id")
     if not isinstance(scene_id, str) or not ID.fullmatch(scene_id): fail(str(path) + ".id", "must be a lowercase kebab-case id")
@@ -204,7 +317,8 @@ def parse_scene(path):
         else: node["polygon"] = parse_polygon(raw.get("rounded_polygon"), where + ".rounded_polygon")
         node["motion"] = parse_motion(raw.get("motion"), where + ".motion")
         parsed.append(node)
-    return {"id": scene_id, "background": color(value.get("background"), str(path) + ".background"), "nodes": parsed}
+    poses = parse_poses(value.get("poses"), parsed, str(path) + ".poses")
+    return {"id": scene_id, "background": color(value.get("background"), str(path) + ".background"), "nodes": parsed, "poses": poses}
 
 
 def f(value):
@@ -216,7 +330,7 @@ def v(value): return "{" + f(value[0]) + ", " + f(value[1]) + "}"
 def c(value): return "{" + ", ".join(map(str, value)) + "}"
 
 def emit(scenes, output):
-    lines = ["// Generated by tools/compile_face_presets.py. Do not edit.", "#pragma once", "", "#include <pet/preset/face_preset.h>", "", "namespace pet::preset::generated {", ""]
+    lines = ["// Generated by tools/compile_face_presets.py. Do not edit.", "#pragma once", "", "#include <pet/preset/face_pose_engine.h>", "", "namespace pet::preset::generated {", ""]
     for scene in scenes:
         name = scene["id"].replace("-", "_")
         lines.append(f"inline constexpr FacePresetNodeDefinition k_{name}_nodes[] = {{")
@@ -243,7 +357,26 @@ def emit(scenes, output):
                 cs = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + "}" for x in corners)
                 es = ", ".join("{" + f(x[0]) + ", " + f(x[1]) + ", " + f(x[2]) + "}" for x in edges)
                 lines.append(prefix + "{}, {" + str(len(vertices)) + ", {{" + vs + "}}, {{" + cs + "}}, {{" + es + "}}}, " + motion_str + "},")
-        lines += ["};", f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}}};", ""]
+        lines += ["};"]
+        poses = scene["poses"]
+        for pose in poses:
+            target_name = f"k_{name}_{pose['id'].replace('-', '_')}_targets"
+            lines.append(f"inline constexpr FacePoseTargetDefinition {target_name}[] = {{")
+            for target in pose["targets"]:
+                response = target["response"]
+                lines.append("    {" + str(target["node_index"]) + ", FacePoseChannel::" + target["enum_name"] + ", " +
+                             str(target["element"]) + ", " + f(target["value"]) + ", {" +
+                             f(response["frequency_hz"]) + ", " + f(response["damping_ratio"]) + ", " +
+                             f(response["maximum_step_seconds"]) + "}},")
+            lines.append("};")
+        if poses:
+            lines.append(f"inline constexpr FacePoseDefinition k_{name}_poses[] = {{")
+            for pose in poses:
+                target_name = f"k_{name}_{pose['id'].replace('-', '_')}_targets"
+                lines.append(f"    {{\"{pose['id']}\", {target_name}, {len(pose['targets'])}}},")
+            lines.append("};")
+        pose_pointer = f"k_{name}_poses" if poses else "nullptr"
+        lines += [f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}, {pose_pointer}, {len(poses)}}};", ""]
     lines.append("inline constexpr const FacePresetDefinition* kFacePresets[] = {")
     for scene in scenes:
         lines.append(f"    &k_{scene['id'].replace('-', '_')},")

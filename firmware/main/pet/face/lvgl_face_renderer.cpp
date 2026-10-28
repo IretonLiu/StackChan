@@ -67,7 +67,10 @@ bool bounds(const FaceDrawing& drawing, lv_area_t& area)
             // Only the control points that belong to this command define the
             // hull; unused fields are zero-initialised.
             const Vec2 points[3] = {command.first, command.second, command.end};
-            const uint8_t count  = command.type == PathCommandType::Cubic ? 3 : 1;
+            const uint8_t count =
+                command.type == PathCommandType::Cubic
+                    ? 3
+                    : ((command.type == PathCommandType::Move || command.type == PathCommandType::Line) ? 1 : 0);
             for (uint8_t point_index = 0; point_index < count; ++point_index) {
                 const Vec2& value = points[point_index];
                 if (!any_point) {
@@ -214,6 +217,9 @@ void LvglFaceRenderer::clearArea(const lv_area_t& area, Color color)
         uint32_t* row = pixels + static_cast<size_t>(y) * stride + static_cast<size_t>(area.x1);
         std::fill(row, row + (area.x2 - area.x1 + 1), pixel);
     }
+    // The canvas resides in PSRAM. Direct CPU writes must be made visible to
+    // the display path just as lv_canvas_fill_bg() does for a full canvas.
+    lv_draw_buf_flush_cache(draw_buffer_, &area);
 }
 
 void LvglFaceRenderer::drawInk(const FaceDrawing& drawing, const lv_area_t& area)

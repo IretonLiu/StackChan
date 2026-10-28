@@ -17,6 +17,8 @@ enum class ShapeKind : uint8_t {
     RoundedPolygon,
 };
 
+struct FacePoseDefinition;
+
 /** Host-compiled data only: firmware never parses JSON scene source. */
 struct FacePresetNodeDefinition {
     ShapeKind kind = ShapeKind::Circle;
@@ -34,7 +36,10 @@ struct FacePresetDefinition {
     const char* id = nullptr;
     shape::Color background{};
     const FacePresetNodeDefinition* nodes = nullptr;
-    uint8_t node_count = 0;
+    uint8_t node_count                    = 0;
+    // Optional typed pose table; definitions live in face_pose_engine.h.
+    const FacePoseDefinition* poses = nullptr;
+    uint8_t pose_count              = 0;
 };
 
 }  // namespace pet::preset

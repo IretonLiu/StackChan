@@ -40,10 +40,10 @@ enum class FacePresetEvaluationError : uint8_t {
 /**
  * Copies and validates a generated preset into caller-owned mutable state.
  *
- * `elapsed_ms` is supplied by the application instead of reading a clock. It
- * is intentionally unused until compiled motion definitions are added; this
- * establishes the host/device-shared playback boundary without changing the
- * static preset result. On failure `evaluation` is left unchanged.
+ * The result is the static base pose; `elapsed_ms` is accepted so the host and
+ * device share one call signature but is not consumed here. Time-dependent motion
+ * is applied afterwards by advanceFacePose() using a frame delta. On failure
+ * `evaluation` is left unchanged.
  */
 [[nodiscard]] bool evaluateFacePreset(const FacePresetDefinition& preset, uint32_t elapsed_ms,
                                       FacePresetEvaluation& evaluation, FacePresetEvaluationError* error = nullptr);

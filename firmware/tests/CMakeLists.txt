@@ -5,6 +5,11 @@ project(stackchan_firmware_tests LANGUAGES CXX)
 enable_testing()
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+# These tests assert their results. A Release configuration defines NDEBUG, which
+# compiles every assert() away and turns the suite into a no-op that always passes.
+# Undefine it after CMAKE_CXX_FLAGS so assertions stay active in every build type.
+add_compile_options(-UNDEBUG)
+
 add_test(NAME face_preset_compiler_test
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/face_preset_compiler_test.py)
 
@@ -61,6 +66,35 @@ target_include_directories(face_motion_test PRIVATE
 target_compile_features(face_motion_test PRIVATE cxx_std_17)
 
 add_test(NAME face_motion_test COMMAND $<TARGET_FILE:face_motion_test>)
+
+add_executable(motion_response_test
+    motion_response_test.cpp
+    ../main/pet/preset/motion_response.cpp
+)
+
+target_include_directories(motion_response_test PRIVATE
+    ../main
+)
+
+target_compile_features(motion_response_test PRIVATE cxx_std_17)
+
+add_test(NAME motion_response_test COMMAND $<TARGET_FILE:motion_response_test>)
+
+add_executable(face_pose_engine_test
+    face_pose_engine_test.cpp
+    ../main/pet/preset/face_pose_engine.cpp
+    ../main/pet/preset/motion_response.cpp
+    ../main/pet/shape/rounded_polygon.cpp
+    ../main/pet/shape/shape_path.cpp
+)
+
+target_include_directories(face_pose_engine_test PRIVATE
+    ../main
+)
+
+target_compile_features(face_pose_engine_test PRIVATE cxx_std_17)
+
+add_test(NAME face_pose_engine_test COMMAND $<TARGET_FILE:face_pose_engine_test>)
 
 add_executable(shape_core_test
     shape_core_test.cpp
