@@ -2,6 +2,7 @@
 #include "canvas.h"
 
 #include "geometry.h"
+#include "animations.h"
 #include "motion_model.h"
 
 #include <imgui.h>
@@ -63,6 +64,10 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
             preview.time_seconds  = editor.motion.time_seconds;
             if (preview.enabled) applyMotion(display.nodes[index], preview, elapsed_ms);
         }
+    }
+    if (editor.animation_preview.playing) {
+        applyAnimationFrame(editor.animation, editor.animation_preview.goal_index,
+                            editor.animation_preview.time_seconds, display.nodes, display.count);
     }
     auto a          = ImGui::GetContentRegionAvail();
     const float fit = std::max(.1f, std::min((a.x - 10) / kDisplayWidth, (a.y - 10) / kDisplayHeight));
@@ -212,8 +217,9 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
 
     // Handles describe authored geometry. While the motion preview clock runs the drawn
     // shape is animated, so editing it would not correspond to a single authored value.
-    if (hierarchy_valid && !editor.motion.playing && (editor.show_corners || editor.show_edges) &&
-        editor.selection >= 0 && editor.selection < static_cast<int>(document.count)) {
+    if (hierarchy_valid && !editor.motion.playing && !editor.animation_preview.playing &&
+        (editor.show_corners || editor.show_edges) && editor.selection >= 0 &&
+        editor.selection < static_cast<int>(document.count)) {
         const Node& selected = document.nodes[editor.selection];
         if (selected.visible && selected.kind == Kind::Polygon &&
             sampleRoundedPolygon(selected.polygon, worlds[editor.selection], handle_sample, selected.style) &&
@@ -568,7 +574,7 @@ bool drawCanvas(SceneDoc& document, EditorState& editor)
     ImGui::TextDisabled("320 x 240 · %s · middle-drag pan · wheel zoom · shift snaps", zoom_label);
     ImGui::SameLine();
     ImGui::TextDisabled("| blue corner joint · cyan corner tip · magenta edge handle · right-click resets a handle");
-    if (editor.motion.playing) {
+    if (editor.motion.playing || editor.animation_preview.playing) {
         ImGui::TextDisabled("| handles hidden while the preview clock runs — pause to edit");
     } else if (handle_tip[0] != '\0') {
         ImGui::TextUnformatted(handle_tip);

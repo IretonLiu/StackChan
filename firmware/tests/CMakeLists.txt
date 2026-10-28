@@ -176,6 +176,7 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
 
     add_executable(kiwi_studio
         kiwi_studio.cpp
+        studio/animations.cpp
         studio/canvas.cpp
         studio/compiler.cpp
         studio/document.cpp
@@ -223,6 +224,10 @@ if(STACKCHAN_BUILD_KIWI_STUDIO OR STACKCHAN_BUILD_SHAPE_STUDIO)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
     )
     set_tests_properties(kiwi_studio_reject_unknown_field PROPERTIES WILL_FAIL TRUE)
+    add_test(NAME kiwi_studio_animation_selftest
+        COMMAND $<TARGET_FILE:kiwi_studio> --animation-selftest
+                ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces/idle.petface.json)
+
     add_test(NAME kiwi_studio_list_scenes
         COMMAND $<TARGET_FILE:kiwi_studio> --list-scenes
                 ${CMAKE_CURRENT_SOURCE_DIR}/../pet_faces)

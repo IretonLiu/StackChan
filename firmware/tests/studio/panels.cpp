@@ -228,14 +228,79 @@ bool scenePanel(SceneDoc& document, EditorState& editor)
     return changed;
 }
 
-bool inspector(SceneDoc& document, EditorState& editor)
+static bool animationPanel(SceneDoc& document, EditorState& editor)
 {
-    if (editor.selection < 0 || size_t(editor.selection) >= document.count) {
-        ImGui::TextDisabled("No node selected");
+    (void)document;
+    ImGui::SeparatorText("Animation");
+    if (editor.animation.empty()) {
+        ImGui::TextDisabled("No animations in this scene.");
         return false;
     }
-    bool changed = false;
-    auto& n      = document.nodes[editor.selection];
+    ImGui::Text("Default goal: %s", editor.animation.default_goal.c_str());
+
+    const int count      = int(editor.animation.goal_count);
+    const int goal_index = editor.animation_preview.goal_index;
+    const char* preview =
+        goal_index >= 0 && goal_index < count ? editor.animation.goals[goal_index].id.c_str() : "(none)";
+    ImGui::TextUnformatted("Preview goal");
+    ImGui::SetNextItemWidth(-1.0f);
+    if (ImGui::BeginCombo("##preview-goal", preview)) {
+        for (int index = 0; index < count; ++index) {
+            const bool selected = goal_index == index;
+            if (ImGui::Selectable(editor.animation.goals[index].id.c_str(), selected)) {
+                editor.animation_preview.goal_index   = index;
+                editor.animation_preview.time_seconds = 0.0f;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::Button(editor.animation_preview.playing ? "Pause" : "Play")) {
+        editor.animation_preview.playing = !editor.animation_preview.playing;
+        if (editor.animation_preview.playing && editor.animation_preview.goal_index < 0)
+            editor.animation_preview.goal_index = editor.animation.findGoal(editor.animation.default_goal);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Restart")) editor.animation_preview.time_seconds = 0.0f;
+    ImGui::SameLine();
+    ImGui::Text("%.2fs", editor.animation_preview.time_seconds);
+
+    for (int goal = 0; goal < count; ++goal) {
+        const AnimationGoal& entry = editor.animation.goals[goal];
+        ImGui::PushID(goal);
+        const std::string label = entry.id + "  ·  pose " + entry.pose_id;
+        if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::BulletText("priority %u · %u ms · events [%s]", entry.priority, entry.duration_ms,
+                              animationEventLabel(entry.event_mask).c_str());
+            for (int program_index = 0; program_index < int(entry.program_count); ++program_index) {
+                const AnimationProgram& program = entry.programs[program_index];
+                ImGui::PushID(program_index);
+                const std::string program_label = program.id + (program.loop ? "  (loop)" : "  (once)");
+                if (ImGui::TreeNode(program_label.c_str())) {
+                    ImGui::BulletText("%.2f s · priority %u", program.duration_seconds, program.priority);
+                    for (int track_index = 0; track_index < int(program.track_count); ++track_index) {
+                        const AnimationTrack& track = program.tracks[track_index];
+                        ImGui::BulletText("%s · %s · %s", track.node_id.c_str(), track.channel.c_str(),
+                                          track.sine ? "sine" : "keyframes");
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
+    }
+    return false;
+}
+
+bool inspector(SceneDoc& document, EditorState& editor)
+{
+    bool changed = animationPanel(document, editor);
+    if (editor.selection < 0 || size_t(editor.selection) >= document.count) {
+        ImGui::TextDisabled("No node selected");
+        return changed;
+    }
+    auto& n = document.nodes[editor.selection];
     std::array<Affine2D, kMaxNodes> worlds{};
     const bool valid_hierarchy = resolveWorlds(document, worlds);
     const char* problem = valid_hierarchy ? shapeProblem(n, worlds[editor.selection]) : "invalid parent ordering";

@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include "studio/animations.h"
 #include "studio/canvas.h"
 #include "studio/compiler.h"
 #include "studio/document.h"
@@ -87,7 +88,8 @@ int runCli(int argc, char** argv)
         for (const FilePickerEntry& entry : entries) printf("%s%s\n", entry.name.c_str(), entry.directory ? "/" : "");
         return 0;
     }
-    if (mode != "--validate" && mode != "--roundtrip" && mode != "--export-svg") return -1;
+    if (mode != "--validate" && mode != "--roundtrip" && mode != "--export-svg" && mode != "--animation-selftest")
+        return -1;
     SceneDoc document;
     std::string error;
     if (!load(document, argv[2], error)) {
@@ -95,6 +97,68 @@ int runCli(int argc, char** argv)
         return 2;
     }
     printf("kiwi_studio: loaded %s (%zu nodes)\n", argv[2], document.count);
+    AnimationDoc animations;
+    if (!parseAnimations(document.poses_json, document.animations_json, document, animations, error)) {
+        fprintf(stderr, "kiwi_studio: %s\n", error.c_str());
+        return 2;
+    }
+    if (!animations.empty())
+        printf("kiwi_studio: %u animation goals, %u poses\n", unsigned(animations.goal_count),
+               unsigned(animations.pose_count));
+    if (mode == "--animation-selftest") {
+        if (animations.empty()) {
+            fprintf(stderr, "kiwi_studio: %s has no animations\n", argv[2]);
+            return 2;
+        }
+        const int goal_index = animations.findGoal(animations.default_goal);
+        if (goal_index < 0) {
+            fprintf(stderr, "kiwi_studio: default goal is not defined\n");
+            return 2;
+        }
+        int left_eye = -1, right_eye = -1, left_ear = -1;
+        for (size_t index = 0; index < document.count; ++index) {
+            if (document.nodes[index].id == "left-eye") left_eye = int(index);
+            if (document.nodes[index].id == "right-eye") right_eye = int(index);
+            if (document.nodes[index].id == "left-ear") left_ear = int(index);
+        }
+        if (left_eye < 0 || right_eye < 0 || left_ear < 0) {
+            fprintf(stderr, "kiwi_studio: expected left/right eye and left ear nodes\n");
+            return 2;
+        }
+        const auto approx = [](float a, float b) { return std::fabs(a - b) < 0.01f; };
+        const auto sample = [&](float time) {
+            std::array<Node, kMaxNodes> nodes = document.nodes;
+            applyAnimationFrame(animations, goal_index, time, nodes, document.count);
+            return nodes;
+        };
+        int failures = 0;
+        {
+            const auto nodes = sample(0.0f);
+            if (!approx(nodes[left_eye].transform.scale.y, 1.0f) || !approx(nodes[right_eye].transform.scale.y, 1.0f)) {
+                printf("animation-selftest: eyes are not open at t=0\n");
+                ++failures;
+            }
+        }
+        {
+            const auto nodes = sample(3.62f);
+            if (!approx(nodes[left_eye].transform.scale.y, 0.08f) ||
+                !approx(nodes[right_eye].transform.scale.y, 0.08f)) {
+                printf("animation-selftest: blink is not closed at t=3.62 (%.3f/%.3f)\n",
+                       nodes[left_eye].transform.scale.y, nodes[right_eye].transform.scale.y);
+                ++failures;
+            }
+        }
+        {
+            const auto nodes = sample(0.7f);
+            if (!approx(nodes[left_ear].transform.rotation_degrees, -22.0f)) {
+                printf("animation-selftest: left ear is %.3f at t=0.7, expected -22\n",
+                       nodes[left_ear].transform.rotation_degrees);
+                ++failures;
+            }
+        }
+        if (failures == 0) printf("animation-selftest: blink and ear-drift sampled correctly\n");
+        return failures == 0 ? 0 : 1;
+    }
     if (mode == "--roundtrip") {
         const char* output = argc >= 4 ? argv[3] : "/tmp/kiwi-studio-roundtrip.petface.json";
         if (!save(document, output)) {
@@ -216,6 +280,27 @@ int main(int argc, char** argv)
                 }
             }
         }
+        if (editor.animation_preview.playing) {
+            auto& preview = editor.animation_preview;
+            preview.time_seconds += ImGui::GetIO().DeltaTime;
+            if (preview.time_seconds > 600.0f) preview.time_seconds = std::fmod(preview.time_seconds, 600.0f);
+            const int goal_index = preview.goal_index;
+            if (goal_index < 0 || goal_index >= int(editor.animation.goal_count)) {
+                preview.playing = false;
+            } else {
+                const AnimationGoal& goal = editor.animation.goals[goal_index];
+                if (goal.duration_ms > 0 && preview.time_seconds * 1000.0f >= float(goal.duration_ms)) {
+                    const int default_index = editor.animation.findGoal(editor.animation.default_goal);
+                    if (default_index >= 0 && default_index != goal_index) {
+                        preview.goal_index   = default_index;
+                        preview.time_seconds = 0.0f;
+                    } else {
+                        preview.time_seconds = float(goal.duration_ms) / 1000.0f;
+                        preview.playing      = false;
+                    }
+                }
+            }
+        }
         ImGui::Text("Kiwi Studio — %s%s", editor.file_path.c_str(), editor.dirty ? " *" : "");
         bool changed = shortcut_changed;
         toolbar(document, editor, history, commands);
@@ -292,12 +377,16 @@ int main(int argc, char** argv)
                 bool replaced_action = false;
                 if (action == Pending::New) {
                     clearScene(document);
-                    editor.selection = -1;
-                    replaced_action  = true;
+                    editor.selection         = -1;
+                    editor.animation         = {};
+                    editor.animation_preview = {};
+                    replaced_action          = true;
                 } else if (action == Pending::Reset) {
                     resetScene(document);
-                    editor.selection = 0;
-                    replaced_action  = true;
+                    editor.selection         = 0;
+                    editor.animation         = {};
+                    editor.animation_preview = {};
+                    replaced_action          = true;
                 } else if (action == Pending::Load) {
                     replaced_action = loadSession(document, editor, pending_load_path);
                 } else if (action == Pending::Quit) {

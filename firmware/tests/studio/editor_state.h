@@ -5,6 +5,7 @@
 // only the document, so undo/redo can never resurrect status text, file paths or a
 // previous selection.
 
+#include "animations.h"
 #include "history.h"
 #include "types.h"
 
@@ -39,6 +40,15 @@ struct EditorState {
 
     // Motion preview clock shared by every node.
     MotionPreview motion{};
+
+    // Compiler-owned animations parsed for display + preview. Read-only for now: the
+    // document keeps the authored JSON verbatim, so this never marks the scene dirty.
+    AnimationDoc animation{};
+    struct AnimationPreview {
+        bool playing       = false;
+        int goal_index     = -1;
+        float time_seconds = 0.0f;
+    } animation_preview{};
 
     // Session state (not part of the document).
     std::string file_path{"kiwi-face.petface.json"};

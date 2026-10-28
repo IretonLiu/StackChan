@@ -23,6 +23,9 @@ inline constexpr size_t kMaxNodes         = 16;
 inline constexpr float kDisplayWidth      = 320.0f;
 inline constexpr float kDisplayHeight     = 240.0f;
 inline constexpr float kMinNodeCoordinate = -4096.0f;
+// The scene grammar nests deeper than ArduinoJson's default once compiler-owned
+// animations (goals > programs > tracks > keyframes) are preserved.
+inline constexpr uint8_t kMaxJsonNesting  = 32;
 inline constexpr float kMaxNodeCoordinate = 4096.0f;
 
 enum class Kind : uint8_t { Circle, Polygon };

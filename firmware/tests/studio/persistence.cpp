@@ -15,12 +15,6 @@
 namespace kiwi::studio {
 
 namespace {
-// The scene grammar nests deeper than ArduinoJson's default limit once compiler-owned
-// animations (goals > tracks > keyframes) are preserved. Raise it explicitly so valid
-// documents are never rejected as TooDeep.
-constexpr uint8_t kMaxJsonNesting = 32;
-}  // namespace
-namespace {
 using namespace pet::shape;
 }  // namespace
 
