@@ -42,6 +42,10 @@
     "edge_handle": {
       "minimum": 0.08,
       "maximum": 0.45
+    },
+    "opacity": {
+      "minimum": 0,
+      "maximum": 1
     }
   },
   "defaults": {
@@ -155,6 +159,13 @@
       "kind": "rounded_polygon",
       "element": true,
       "range": "edge_handle"
+    },
+    {
+      "id": "opacity",
+      "enum": "Opacity",
+      "kind": null,
+      "element": false,
+      "range": "opacity"
     }
   ]
 }

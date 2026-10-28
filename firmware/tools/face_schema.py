@@ -25,6 +25,7 @@ RANGE_CPP = {
     "corner_cap_tension": ("pet::shape", "kMinCapTension", "kMaxCapTension"),
     "edge_bulge": ("pet::shape", "kMinEdgeBulge", "kMaxEdgeBulge"),
     "edge_handle": ("pet::shape", "kMinEdgeHandle", "kMaxEdgeHandle"),
+    "opacity": ("pet::preset", "kOpacityMinimum", "kOpacityMaximum"),
 }
 DEFAULT_CPP = {
     "corner_roundness": "kDefaultCornerRoundness",

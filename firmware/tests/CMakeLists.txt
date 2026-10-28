@@ -57,19 +57,6 @@ target_compile_features(face_expression_test PRIVATE cxx_std_17)
 
 add_test(NAME face_expression_test COMMAND $<TARGET_FILE:face_expression_test>)
 
-add_executable(face_motion_test
-    face_motion_test.cpp
-    ../main/pet/preset/face_motion.cpp
-)
-
-target_include_directories(face_motion_test PRIVATE
-    ../main
-)
-
-target_compile_features(face_motion_test PRIVATE cxx_std_17)
-
-add_test(NAME face_motion_test COMMAND $<TARGET_FILE:face_motion_test>)
-
 add_executable(motion_response_test
     motion_response_test.cpp
     ../main/pet/preset/motion_response.cpp

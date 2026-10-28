@@ -3,8 +3,6 @@
  */
 #pragma once
 
-#include "face_motion.h"
-
 #include <pet/shape/circle.h>
 #include <pet/shape/rounded_polygon.h>
 
@@ -29,8 +27,6 @@ struct FacePresetNodeDefinition {
     int8_t parent_index = -1;
     shape::CircleParameters circle{};
     shape::RoundedPolygonParameters rounded_polygon{};
-    KeyframeMotion motion{};
-    MotionEasing motion_easing = MotionEasing::Linear;
 };
 
 struct FacePresetDefinition {
@@ -39,8 +35,8 @@ struct FacePresetDefinition {
     const FacePresetNodeDefinition* nodes = nullptr;
     uint8_t node_count                    = 0;
     // Optional typed pose table; definitions live in face_pose_engine.h.
-    const FacePoseDefinition* poses = nullptr;
-    uint8_t pose_count              = 0;
+    const FacePoseDefinition* poses                    = nullptr;
+    uint8_t pose_count                                 = 0;
     const FaceAnimationGoalDefinition* animation_goals = nullptr;
     uint8_t animation_goal_count                       = 0;
     const char* default_animation_goal_id              = nullptr;

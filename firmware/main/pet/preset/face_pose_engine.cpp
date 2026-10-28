@@ -115,6 +115,11 @@ bool locateChannelImpl(Evaluation& evaluation, uint8_t node_index, FacePoseChann
             value = &node.rounded_polygon.edges[element_index].end;
             range = {shape::kMinEdgeHandle, shape::kMaxEdgeHandle};
             return true;
+        case FacePoseChannel::Opacity:
+            if (element_index != 0) return false;
+            value = &node.style.opacity;
+            range = {kOpacityMinimum, kOpacityMaximum};
+            return true;
     }
     return false;
 }

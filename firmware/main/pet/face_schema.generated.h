@@ -23,6 +23,7 @@ enum class FacePoseChannel : uint8_t {
     PolygonEdgeBulge,
     PolygonEdgeStart,
     PolygonEdgeEnd,
+    Opacity,
 };
 
 inline constexpr uint8_t kMaxFacePresetNodes     = 16;
@@ -41,6 +42,8 @@ inline constexpr float kScaleMinimum      = 0.01f;
 inline constexpr float kScaleMaximum      = 16.0f;
 inline constexpr float kRadiusMinimum     = 0.01f;
 inline constexpr float kRadiusMaximum     = 4096.0f;
+inline constexpr float kOpacityMinimum    = 0.0f;
+inline constexpr float kOpacityMaximum    = 1.0f;
 
 }  // namespace pet::preset
 
