@@ -47,6 +47,37 @@ constexpr FaceAnimationEventMask faceAnimationEventMask(FaceAnimationEvent event
     return static_cast<FaceAnimationEventMask>(event);
 }
 
+struct FaceAnimationEventInfo {
+    FaceAnimationEvent event;
+    const char* id;
+};
+inline constexpr FaceAnimationEventInfo kFaceAnimationEvents[] = {
+    {FaceAnimationEvent::ScreenTap, "screen-tap"},
+    {FaceAnimationEvent::PetStroke, "pet-stroke"},
+    {FaceAnimationEvent::Shake, "shake"},
+    {FaceAnimationEvent::SleepTimeout, "sleep-timeout"},
+    {FaceAnimationEvent::Wake, "wake"},
+    {FaceAnimationEvent::WakeComplete, "wake-complete"},
+    {FaceAnimationEvent::HappyComplete, "happy-complete"},
+};
+inline constexpr uint8_t kFaceAnimationEventCount = 7;
+
+struct FaceAnimationEventNameInfo {
+    const char* id;
+    FaceAnimationEvent event;
+};
+inline constexpr FaceAnimationEventNameInfo kFaceAnimationEventNames[] = {
+    {"screen-tap", FaceAnimationEvent::ScreenTap},
+    {"pet-stroke", FaceAnimationEvent::PetStroke},
+    {"pet", FaceAnimationEvent::PetStroke},
+    {"shake", FaceAnimationEvent::Shake},
+    {"sleep-timeout", FaceAnimationEvent::SleepTimeout},
+    {"wake", FaceAnimationEvent::Wake},
+    {"wake-complete", FaceAnimationEvent::WakeComplete},
+    {"happy-complete", FaceAnimationEvent::HappyComplete},
+};
+inline constexpr uint8_t kFaceAnimationEventNameCount = 8;
+
 inline constexpr uint8_t kMaxFacePresetNodes     = 16;
 inline constexpr uint8_t kMaxFacePresetPoses     = 8;
 inline constexpr uint8_t kMaxFacePoseTargets     = 32;

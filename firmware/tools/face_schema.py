@@ -238,7 +238,20 @@ def render_header(schema):
     lines.extend(["};", "", "using FaceAnimationEventMask = uint32_t;",
                   "inline constexpr FaceAnimationEventMask kNoFaceAnimationEvent = 0u;",
                   "constexpr FaceAnimationEventMask faceAnimationEventMask(FaceAnimationEvent event)",
-                  "{", "    return static_cast<FaceAnimationEventMask>(event);", "}", ""])
+                  "{", "    return static_cast<FaceAnimationEventMask>(event);", "}", "",
+                  "struct FaceAnimationEventInfo {", "    FaceAnimationEvent event;", "    const char* id;", "};",
+                  "inline constexpr FaceAnimationEventInfo kFaceAnimationEvents[] = {"])
+    for event in schema["events"]:
+        lines.append(f'    {{FaceAnimationEvent::{event["enum"]}, "{event["id"]}"}},')
+    lines.extend(["};", f"inline constexpr uint8_t kFaceAnimationEventCount = {len(schema['events'])};", "",
+                  "struct FaceAnimationEventNameInfo {", "    const char* id;", "    FaceAnimationEvent event;", "};",
+                  "inline constexpr FaceAnimationEventNameInfo kFaceAnimationEventNames[] = {"])
+    for event in schema["events"]:
+        lines.append(f'    {{"{event["id"]}", FaceAnimationEvent::{event["enum"]}}},')
+        for alias in event["aliases"]:
+            lines.append(f'    {{"{alias}", FaceAnimationEvent::{event["enum"]}}},')
+    event_name_count = sum(1 + len(event["aliases"]) for event in schema["events"])
+    lines.extend(["};", f"inline constexpr uint8_t kFaceAnimationEventNameCount = {event_name_count};", ""])
 
     append_aligned(
         lines,
