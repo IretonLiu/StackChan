@@ -13,7 +13,7 @@ enum class FacePoseChannel : uint8_t {
     TransformRotationDegrees,
     TransformScaleX,
     TransformScaleY,
-    StyleOpacity,
+    Opacity,
     CircleCenterX,
     CircleCenterY,
     CircleRadius,
@@ -24,10 +24,28 @@ enum class FacePoseChannel : uint8_t {
     PolygonEdgeBulge,
     PolygonEdgeStart,
     PolygonEdgeEnd,
-    Opacity,
 };
 
 inline constexpr uint8_t kFacePoseChannelCount = 16;
+
+/** Schema-defined input and behaviour events used by compiled face goals. */
+enum class FaceAnimationEvent : uint32_t {
+    None = 0u,
+    ScreenTap = 1u << 0,
+    PetStroke = 1u << 1,
+    Shake = 1u << 2,
+    SleepTimeout = 1u << 3,
+    Wake = 1u << 4,
+    WakeComplete = 1u << 5,
+    HappyComplete = 1u << 6,
+};
+
+using FaceAnimationEventMask = uint32_t;
+inline constexpr FaceAnimationEventMask kNoFaceAnimationEvent = 0u;
+constexpr FaceAnimationEventMask faceAnimationEventMask(FaceAnimationEvent event)
+{
+    return static_cast<FaceAnimationEventMask>(event);
+}
 
 inline constexpr uint8_t kMaxFacePresetNodes     = 16;
 inline constexpr uint8_t kMaxFacePresetPoses     = 8;
@@ -48,8 +66,6 @@ inline constexpr float kOpacityMinimum    = 0.0f;
 inline constexpr float kOpacityMaximum    = 1.0f;
 inline constexpr float kRadiusMinimum     = 0.01f;
 inline constexpr float kRadiusMaximum     = 4096.0f;
-inline constexpr float kOpacityMinimum    = 0.0f;
-inline constexpr float kOpacityMaximum    = 1.0f;
 
 }  // namespace pet::preset
 

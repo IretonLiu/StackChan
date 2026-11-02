@@ -804,31 +804,6 @@
             "end": 0.28
           }
         ]
-      },
-      "motion": {
-        "enabled": true,
-        "loop": true,
-        "use_keyframes": true,
-        "property": 2,
-        "amplitude": 8,
-        "period_seconds": 1,
-        "phase_radians": 0,
-        "duration_seconds": 2,
-        "easing": "smoothstep",
-        "keyframes": [
-          {
-            "time_seconds": 0,
-            "value": -30
-          },
-          {
-            "time_seconds": 0.1,
-            "value": -40
-          },
-          {
-            "time_seconds": 0.2,
-            "value": -30
-          }
-        ]
       }
     },
     {
@@ -905,17 +880,6 @@
             "end": 0.28
           }
         ]
-      },
-      "motion": {
-        "enabled": false,
-        "loop": true,
-        "use_keyframes": false,
-        "property": 2,
-        "amplitude": 8,
-        "period_seconds": 2,
-        "phase_radians": 0,
-        "duration_seconds": 2,
-        "easing": "linear"
       }
     },
     {
@@ -1005,17 +969,6 @@
             "end": 0.28
           }
         ]
-      },
-      "motion": {
-        "enabled": false,
-        "loop": true,
-        "use_keyframes": false,
-        "property": 2,
-        "amplitude": 8,
-        "period_seconds": 2,
-        "phase_radians": 0,
-        "duration_seconds": 2,
-        "easing": "linear"
       }
     },
     {
@@ -1105,17 +1058,6 @@
             "end": 0.28
           }
         ]
-      },
-      "motion": {
-        "enabled": false,
-        "loop": true,
-        "use_keyframes": false,
-        "property": 2,
-        "amplitude": 8,
-        "period_seconds": 2,
-        "phase_radians": 0,
-        "duration_seconds": 2,
-        "easing": "linear"
       }
     },
     {

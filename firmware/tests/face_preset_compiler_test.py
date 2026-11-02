@@ -70,6 +70,8 @@ class FacePresetCompilerTest(unittest.TestCase):
             ("duplicate-pose-channel", duplicate_pose_target, "duplicates another target channel"),
             ("missing-idle-pose", lambda value: value.update(poses=[]), "must name a defined pose"),
             ("missing-poses", lambda value: value.pop("poses"), "must name a defined pose"),
+            ("ambient-duration", lambda value: value["animations"]["goals"][0].update(events=[], duration_ms=1),
+             "must be zero when no event activates the goal"),
         ]
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
@@ -81,19 +83,50 @@ class FacePresetCompilerTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 2, name)
                 self.assertIn(expected, result.stderr, name)
 
-    def test_v1_pet_event_alias_and_custom_event_compile(self):
+    def test_schema_events_compile_to_their_generated_masks(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            event_enums = ["ScreenTap", "PetStroke", "Shake", "SleepTimeout", "Wake", "WakeComplete", "HappyComplete"]
+            output = directory / "out.h"
+            result = self.compile(VALID, output)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            generated = output.read_text()
+            for enum_name in event_enums:
+                self.assertIn(f"FaceAnimationEvent::{enum_name}", generated)
+
+    def test_legacy_pet_alias_and_invalid_events_are_rejected_precisely(self):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
             scene = json.loads(VALID.read_text())
             scene["animations"]["goals"][1]["events"] = ["pet"]
-            scene["animations"]["goals"][2]["events"] = ["pack-custom-event"]
-            source, output = directory / "compat.petface.json", directory / "out.h"
+            source, output = directory / "legacy.petface.json", directory / "out.h"
             source.write_text(json.dumps(scene))
             result = self.compile(source, output)
             self.assertEqual(result.returncode, 0, result.stderr)
-            generated = output.read_text()
-            self.assertIn('"pet-stroke"', generated)
-            self.assertIn('"pack-custom-event"', generated)
+            self.assertIn("FaceAnimationEvent::PetStroke", output.read_text())
+
+            scene["animations"]["goals"][1]["events"] = ["unknown-event"]
+            source.write_text(json.dumps(scene))
+            result = self.compile(source, output)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("schema-defined animation event", result.stderr)
+
+            scene["animations"]["goals"][1]["events"] = ["pet-stroke", "pet"]
+            source.write_text(json.dumps(scene))
+            result = self.compile(source, output)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("duplicates another event", result.stderr)
+
+    def test_per_node_motion_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            scene = json.loads(VALID.read_text())
+            scene["nodes"][0]["motion"] = {"legacy": True}
+            source, output = directory / "legacy-motion.petface.json", directory / "out.h"
+            source.write_text(json.dumps(scene))
+            result = self.compile(source, output)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("per-node motion was removed", result.stderr)
 
     def test_invalid_pose_contract_fails_loudly(self):
         with tempfile.TemporaryDirectory() as directory:

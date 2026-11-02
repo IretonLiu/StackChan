@@ -3,21 +3,13 @@
  */
 #pragma once
 
+#include <pet/face_schema.generated.h>
 #include <pet/shape/circle.h>
 #include <pet/shape/rounded_polygon.h>
 
 #include <cstdint>
 
 namespace pet::preset {
-
-using FaceAnimationEvent = uint32_t;
-inline constexpr FaceAnimationEvent kNoFaceAnimationEvent = 0;
-
-/** An authored event name resolved by the compiled preset, not firmware enums. */
-struct FaceAnimationEventDefinition {
-    const char* id = nullptr;
-    FaceAnimationEvent mask = kNoFaceAnimationEvent;
-};
 
 enum class ShapeKind : uint8_t {
     Circle,
@@ -49,8 +41,6 @@ struct FacePresetDefinition {
     const FaceAnimationGoalDefinition* animation_goals = nullptr;
     uint8_t animation_goal_count                       = 0;
     const char* default_animation_goal_id              = nullptr;
-    const FaceAnimationEventDefinition* animation_events = nullptr;
-    uint8_t animation_event_count                       = 0;
 };
 
 }  // namespace pet::preset

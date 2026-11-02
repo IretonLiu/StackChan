@@ -20,9 +20,9 @@ bool sameChannel(const FacePoseRuntimeTarget& target, const FaceMotionTrackDefin
            target.element_index == track.element_index;
 }
 
-bool eventMatches(FaceAnimationEvent mask, FaceAnimationEvent event)
+bool eventMatches(FaceAnimationEventMask mask, FaceAnimationEvent event)
 {
-    return event != kNoFaceAnimationEvent && (mask & event) != 0;
+    return event != FaceAnimationEvent::None && (mask & faceAnimationEventMask(event)) != 0;
 }
 
 const FaceAnimationGoalDefinition* findGoal(const FacePresetDefinition& preset, const char* id)
@@ -169,18 +169,6 @@ bool resolvePrograms(FaceAnimationRuntime& runtime)
 
 }  // namespace
 
-FaceAnimationEvent findFaceAnimationEvent(const FacePresetDefinition& preset, std::string_view event_id)
-{
-    if (event_id.empty() || preset.animation_events == nullptr ||
-        preset.animation_event_count == 0 || preset.animation_event_count > kMaxFaceAnimationEvents)
-        return kNoFaceAnimationEvent;
-    for (uint8_t index = 0; index < preset.animation_event_count; ++index) {
-        const FaceAnimationEventDefinition& event = preset.animation_events[index];
-        if (event.id != nullptr && event_id == event.id) return event.mask;
-    }
-    return kNoFaceAnimationEvent;
-}
-
 bool initializeFaceAnimation(const FacePresetDefinition& preset, const FacePresetEvaluation& base,
                              FaceAnimationRuntime& runtime)
 {
@@ -198,7 +186,7 @@ bool initializeFaceAnimation(const FacePresetDefinition& preset, const FacePrese
 bool dispatchFaceAnimation(const FacePresetDefinition& preset, FaceAnimationEvent event,
                            const FacePresetEvaluation& current, FaceAnimationRuntime& runtime)
 {
-    if (!runtime.initialized || event == kNoFaceAnimationEvent || preset.animation_goals == nullptr ||
+    if (!runtime.initialized || event == FaceAnimationEvent::None || preset.animation_goals == nullptr ||
         preset.animation_goal_count > kMaxFaceAnimationGoals)
         return false;
     const FaceAnimationGoalDefinition* selected = nullptr;

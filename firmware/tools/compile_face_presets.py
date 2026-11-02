@@ -15,7 +15,6 @@ MAX_POLYGON_CORNERS = SCHEMA["limits"]["max_polygon_corners"]
 MAX_POSES = SCHEMA["limits"]["max_poses"]
 MAX_POSE_TARGETS = SCHEMA["limits"]["max_pose_targets"]
 MAX_ANIMATION_GOALS = SCHEMA["limits"]["max_animation_goals"]
-MAX_ANIMATION_EVENTS = SCHEMA["limits"]["max_animation_events"]
 MAX_MOTION_PROGRAMS = SCHEMA["limits"]["max_motion_programs"]
 MAX_MOTION_TRACKS = SCHEMA["limits"]["max_motion_tracks"]
 MAX_MOTION_KEYFRAMES = SCHEMA["limits"]["max_motion_keyframes"]
@@ -24,8 +23,13 @@ MAX_MOTION_KEYFRAMES = SCHEMA["limits"]["max_motion_keyframes"]
 DEFAULT_CONTRACT = Path(__file__).resolve().parents[1] / "pet_faces" / "pose_contract.json"
 MAX_CXX_FLOAT = 3.4028234663852886e38
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
-# The former v1 event spelling remains accepted at the schema boundary.
-EVENT_ALIASES = {"pet": "pet-stroke"}
+# The schema owns every accepted JSON spelling, including legacy aliases.
+EVENTS_BY_ID = {
+    spelling: event
+    for event in SCHEMA["events"]
+    for spelling in (event["id"], *event["aliases"])
+}
+EVENT_INDEX = {event["id"]: index for index, event in enumerate(SCHEMA["events"])}
 
 # channel: (generated enum name, required primitive kind, requires element index, minimum, maximum)
 POSE_CHANNELS = {
@@ -291,26 +295,6 @@ def parse_animations(value, nodes, poses, where):
         pose["id"]: {(target["node_index"], target["enum_name"], target["element"]) for target in pose["targets"]}
         for pose in poses
     }
-    # Event identifiers belong to the compiled face pack. The runtime resolves
-    # them through the generated per-preset registry, so new preset events do
-    # not require editing a firmware enum or application mapper.
-    event_ids = []
-    for goal_index, raw_goal in enumerate(goals):
-        goal_where = f"{where}.goals[{goal_index}]"
-        raw_goal = obj(raw_goal, goal_where)
-        raw_events = raw_goal.get("events")
-        if not isinstance(raw_events, list):
-            fail(goal_where + ".events", "must be an array")
-        for event_index, event in enumerate(raw_events):
-            event_where = f"{goal_where}.events[{event_index}]"
-            if not isinstance(event, str) or not ID.fullmatch(event):
-                fail(event_where, "must be a lowercase kebab-case animation event id")
-            event = EVENT_ALIASES.get(event, event)
-            if event not in event_ids:
-                event_ids.append(event)
-    if len(event_ids) > MAX_ANIMATION_EVENTS:
-        fail(where + ".goals", f"uses more than {MAX_ANIMATION_EVENTS} distinct animation events")
-    events = {event: 1 << index for index, event in enumerate(event_ids)}
     parsed, seen = [], set()
     for goal_index, raw_goal in enumerate(goals):
         goal_where = f"{where}.goals[{goal_index}]"
@@ -326,15 +310,20 @@ def parse_animations(value, nodes, poses, where):
         raw_events = raw_goal.get("events")
         if not isinstance(raw_events, list):
             fail(goal_where + ".events", "must be an array")
-        event_mask = 0
-        for event_index, event in enumerate(raw_events):
+        event_mask, event_enums, seen_events = 0, [], set()
+        for event_index, event_id in enumerate(raw_events):
             event_where = f"{goal_where}.events[{event_index}]"
-            if not isinstance(event, str) or not ID.fullmatch(event):
+            if not isinstance(event_id, str) or not ID.fullmatch(event_id):
                 fail(event_where, "must be a lowercase kebab-case animation event id")
-            event = EVENT_ALIASES.get(event, event)
-            if event_mask & events[event]:
+            event = EVENTS_BY_ID.get(event_id)
+            if event is None:
+                fail(event_where, "must name a schema-defined animation event")
+            canonical_id = event["id"]
+            if canonical_id in seen_events:
                 fail(event_where, "duplicates another event")
-            event_mask |= events[event]
+            seen_events.add(canonical_id)
+            event_enums.append(event["enum"])
+            event_mask |= 1 << EVENT_INDEX[canonical_id]
         goal_priority = raw_goal.get("priority", 0)
         if isinstance(goal_priority, bool) or not isinstance(goal_priority, int) or not 0 <= goal_priority <= 255:
             fail(goal_where + ".priority", "must be an integer from 0 to 255")
@@ -440,11 +429,11 @@ def parse_animations(value, nodes, poses, where):
                                       "source": parsed_source})
             parsed_programs.append({"id": program_id, "duration_seconds": duration, "loop": loop,
                                     "priority": priority, "tracks": parsed_tracks})
-        parsed.append({"id": goal_id, "pose": pose_id, "event_mask": event_mask, "priority": goal_priority,
-                       "duration_ms": duration_ms, "programs": parsed_programs})
+        parsed.append({"id": goal_id, "pose": pose_id, "event_mask": event_mask, "event_enums": event_enums,
+                       "priority": goal_priority, "duration_ms": duration_ms, "programs": parsed_programs})
     if default_goal not in seen:
         fail(where + ".default_goal", "must name a defined goal")
-    return {"default_goal": default_goal, "events": event_ids, "goals": parsed}
+    return {"default_goal": default_goal, "goals": parsed}
 
 
 def parse_scene(path):
@@ -534,11 +523,6 @@ def emit(scenes, output, contract):
             lines.append("};")
         pose_pointer = f"k_{name}_poses" if poses else "nullptr"
         animations = scene["animations"]
-        event_name = f"k_{name}_animation_events"
-        lines.append(f"inline constexpr FaceAnimationEventDefinition {event_name}[] = {{")
-        for event_index, event_id in enumerate(animations["events"]):
-            lines.append(f'    {{"{event_id}", static_cast<FaceAnimationEvent>(1u << {event_index})}},')
-        lines.append("};")
         for goal in animations["goals"]:
             goal_name = f"k_{name}_{goal['id'].replace('-', '_')}"
             for program in goal["programs"]:
@@ -575,9 +559,10 @@ def emit(scenes, output, contract):
         for goal in animations["goals"]:
             goal_name = f"k_{name}_{goal['id'].replace('-', '_')}"
             program_pointer = f"{goal_name}_programs" if goal["programs"] else "nullptr"
-            lines.append(f"    {{\"{goal['id']}\", \"{goal['pose']}\", static_cast<FaceAnimationEvent>({goal['event_mask']}), {goal['priority']}, {goal['duration_ms']}, {program_pointer}, {len(goal['programs'])}}},")
+            event_mask = " | ".join(f"faceAnimationEventMask(FaceAnimationEvent::{enum_name})" for enum_name in goal["event_enums"]) or "kNoFaceAnimationEvent"
+            lines.append(f"    {{\"{goal['id']}\", \"{goal['pose']}\", {event_mask}, {goal['priority']}, {goal['duration_ms']}, {program_pointer}, {len(goal['programs'])}}},")
         lines.append("};")
-        lines += [f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}, {pose_pointer}, {len(poses)}, k_{name}_animation_goals, {len(animations['goals'])}, \"{animations['default_goal']}\", {event_name}, {len(animations['events'])}}};", ""]
+        lines += [f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}, {pose_pointer}, {len(poses)}, k_{name}_animation_goals, {len(animations['goals'])}, \"{animations['default_goal']}\"}};", ""]
     lines.append("inline constexpr const FacePresetDefinition* kFacePresets[] = {")
     for scene in scenes:
         lines.append(f"    &k_{scene['id'].replace('-', '_')},")

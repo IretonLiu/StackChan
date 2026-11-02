@@ -8,6 +8,7 @@ without a code-generation step; ``face_schema_test.py`` fails if it drifts.
 """
 import json
 import math
+import re
 from pathlib import Path
 
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "pet_faces" / "face_schema.json"
@@ -26,7 +27,6 @@ RANGE_CPP = {
     "corner_cap_tension": ("pet::shape", "kMinCapTension", "kMaxCapTension"),
     "edge_bulge": ("pet::shape", "kMinEdgeBulge", "kMaxEdgeBulge"),
     "edge_handle": ("pet::shape", "kMinEdgeHandle", "kMaxEdgeHandle"),
-    "opacity": ("pet::preset", "kOpacityMinimum", "kOpacityMaximum"),
 }
 DEFAULT_CPP = {
     "corner_roundness": "kDefaultCornerRoundness",
@@ -92,7 +92,7 @@ def load_schema(path=SCHEMA_PATH):
         raise SchemaError(f"{path}: {error}") from error
 
     value = obj(value, str(path))
-    require_keys(value, {"version", "limits", "ranges", "defaults", "channels"}, str(path))
+    require_keys(value, {"version", "limits", "ranges", "defaults", "channels", "events"}, str(path))
     if value["version"] != 1:
         fail(str(path) + ".version", "must be 1")
 
@@ -159,12 +159,46 @@ def load_schema(path=SCHEMA_PATH):
             }
         )
 
+    events = value["events"]
+    if not isinstance(events, list) or not events:
+        fail(str(path) + ".events", "must be a non-empty array")
+    if len(events) > limits["max_animation_events"]:
+        fail(str(path) + ".events", f"must contain at most {limits['max_animation_events']} entries")
+    parsed_events, seen_event_ids, seen_event_enums = [], set(), set()
+    for index, raw in enumerate(events):
+        where = f"{path}.events[{index}]"
+        raw = obj(raw, where)
+        require_keys(raw, {"id", "enum", "aliases"}, where)
+        event_id, enum_name, aliases = raw["id"], raw["enum"], raw["aliases"]
+        if not isinstance(event_id, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", event_id):
+            fail(where + ".id", "must be a lowercase kebab-case id")
+        if not isinstance(enum_name, str) or not enum_name.isidentifier():
+            fail(where + ".enum", "must be a C++ identifier")
+        if event_id in seen_event_ids:
+            fail(where + ".id", "duplicates another event id or alias")
+        if enum_name in seen_event_enums:
+            fail(where + ".enum", "duplicates another event enum name")
+        if not isinstance(aliases, list):
+            fail(where + ".aliases", "must be an array")
+        parsed_aliases = []
+        for alias_index, alias in enumerate(aliases):
+            if not isinstance(alias, str) or not re.fullmatch(r"[a-z][a-z0-9-]*", alias):
+                fail(f"{where}.aliases[{alias_index}]", "must be a lowercase kebab-case id")
+            if alias in seen_event_ids or alias == event_id or alias in parsed_aliases:
+                fail(f"{where}.aliases[{alias_index}]", "duplicates another event id or alias")
+            parsed_aliases.append(alias)
+        seen_event_ids.add(event_id)
+        seen_event_ids.update(parsed_aliases)
+        seen_event_enums.add(enum_name)
+        parsed_events.append({"id": event_id, "enum": enum_name, "aliases": parsed_aliases})
+
     return {
         "version": 1,
         "limits": limits,
         "ranges": parsed_ranges,
         "defaults": parsed_defaults,
         "channels": parsed_channels,
+        "events": parsed_events,
     }
 
 
@@ -196,7 +230,15 @@ def render_header(schema):
     ]
     for channel in schema["channels"]:
         lines.append(f"    {channel['enum']},")
-    lines.extend(["};", "", f"inline constexpr uint8_t kFacePoseChannelCount = {len(schema['channels'])};", ""])
+    lines.extend(["};", "", f"inline constexpr uint8_t kFacePoseChannelCount = {len(schema['channels'])};", "",
+                  "/** Schema-defined input and behaviour events used by compiled face goals. */",
+                  "enum class FaceAnimationEvent : uint32_t {", "    None = 0u,"])
+    for index, event in enumerate(schema["events"]):
+        lines.append(f"    {event['enum']} = 1u << {index},")
+    lines.extend(["};", "", "using FaceAnimationEventMask = uint32_t;",
+                  "inline constexpr FaceAnimationEventMask kNoFaceAnimationEvent = 0u;",
+                  "constexpr FaceAnimationEventMask faceAnimationEventMask(FaceAnimationEvent event)",
+                  "{", "    return static_cast<FaceAnimationEventMask>(event);", "}", ""])
 
     append_aligned(
         lines,

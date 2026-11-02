@@ -45,7 +45,7 @@ void testCompiledTrackAndEventExpiry()
     const FaceMotionProgramDefinition programs[] = {{"blink", tracks, 1, 1.0f, true, 0}};
     const FaceAnimationGoalDefinition goals[] = {
         {"idle", "idle", kNoFaceAnimationEvent, 0, 0, programs, 1},
-        {"alert", "alert", 1u, 10, 100, nullptr, 0},
+        {"alert", "alert", faceAnimationEventMask(FaceAnimationEvent::ScreenTap), 10, 100, nullptr, 0},
     };
     const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 2, goals, 2, "idle"};
     FacePresetEvaluation evaluation = base();
@@ -58,24 +58,48 @@ void testCompiledTrackAndEventExpiry()
     assert(changed);
     assert(std::fabs(evaluation.nodes[0].transform.scale.y - 0.1f) < 0.0001f);
 
-    assert(dispatchFaceAnimation(preset, 1u, evaluation, runtime));
+    assert(dispatchFaceAnimation(preset, FaceAnimationEvent::ScreenTap, evaluation, runtime));
     assert(advanceFaceAnimation(preset, 0.001f, evaluation, runtime));
     assert(std::fabs(evaluation.nodes[0].transform.scale.y - 1.4f) < 0.0001f);
     assert(advanceFaceAnimation(preset, 0.11f, evaluation, runtime));
     assert(runtime.active_goal == runtime.default_goal);
 }
 
-void testGeneratedEventRegistryResolvesCustomIds()
+void testSchemaEventsSelectHighestPriorityAndLatch()
 {
-    const FacePoseTargetDefinition targets[] = {{0, FacePoseChannel::TransformScaleY, 0, 1.0f, response()}};
-    const FacePoseDefinition poses[] = {{"idle", targets, 1}};
-    const FaceAnimationGoalDefinition goals[] = {{"idle", "idle", kNoFaceAnimationEvent, 0, 0, nullptr, 0}};
-    const FaceAnimationEventDefinition events[] = {{"custom-pack-event", 1u}, {"other-event", 2u}};
-    const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1, goals, 1, "idle", events, 2};
+    const FacePoseTargetDefinition idle_targets[] = {{0, FacePoseChannel::TransformScaleY, 0, 1.0f, response()}};
+    const FacePoseTargetDefinition low_targets[] = {{0, FacePoseChannel::TransformScaleY, 0, 1.1f, response()}};
+    const FacePoseTargetDefinition high_targets[] = {{0, FacePoseChannel::TransformScaleY, 0, 1.3f, response()}};
+    const FacePoseDefinition poses[] = {{"idle", idle_targets, 1}, {"low", low_targets, 1}, {"high", high_targets, 1}};
+    const FaceAnimationEvent events[] = {FaceAnimationEvent::ScreenTap, FaceAnimationEvent::PetStroke,
+                                         FaceAnimationEvent::Shake, FaceAnimationEvent::SleepTimeout,
+                                         FaceAnimationEvent::Wake, FaceAnimationEvent::WakeComplete,
+                                         FaceAnimationEvent::HappyComplete};
+    const FaceAnimationEventMask all_events = faceAnimationEventMask(FaceAnimationEvent::ScreenTap) |
+                                              faceAnimationEventMask(FaceAnimationEvent::PetStroke) |
+                                              faceAnimationEventMask(FaceAnimationEvent::Shake) |
+                                              faceAnimationEventMask(FaceAnimationEvent::SleepTimeout) |
+                                              faceAnimationEventMask(FaceAnimationEvent::Wake) |
+                                              faceAnimationEventMask(FaceAnimationEvent::WakeComplete) |
+                                              faceAnimationEventMask(FaceAnimationEvent::HappyComplete);
+    const FaceAnimationGoalDefinition goals[] = {
+        {"idle", "idle", kNoFaceAnimationEvent, 0, 0, nullptr, 0},
+        {"low", "low", all_events, 2, 0, nullptr, 0},
+        {"high", "high", all_events, 3, 0, nullptr, 0},
+    };
+    const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 3, goals, 3, "idle"};
+    FacePresetEvaluation evaluation = base();
+    FaceAnimationRuntime runtime;
+    runtime.pose.response_function = snap;
 
-    assert(findFaceAnimationEvent(preset, "custom-pack-event") == 1u);
-    assert(findFaceAnimationEvent(preset, "other-event") == 2u);
-    assert(findFaceAnimationEvent(preset, "missing") == kNoFaceAnimationEvent);
+    assert(initializeFaceAnimation(preset, evaluation, runtime));
+    for (uint8_t index = 0; index < 7; ++index) {
+        assert(faceAnimationEventMask(events[index]) == (1u << index));
+        assert(dispatchFaceAnimation(preset, events[index], evaluation, runtime));
+        assert(runtime.active_goal == &goals[2]);
+    }
+    assert(advanceFaceAnimation(preset, 60.0f, evaluation, runtime));
+    assert(runtime.active_goal == &goals[2]);
 }
 
 void testProceduralSourceUsesTheSameChannelPath()
@@ -103,7 +127,7 @@ void testProceduralSourceUsesTheSameChannelPath()
 int main()
 {
     testCompiledTrackAndEventExpiry();
-    testGeneratedEventRegistryResolvesCustomIds();
+    testSchemaEventsSelectHighestPriorityAndLatch();
     testProceduralSourceUsesTheSameChannelPath();
     return 0;
 }

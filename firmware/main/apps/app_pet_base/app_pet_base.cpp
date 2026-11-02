@@ -28,28 +28,29 @@ void accumulateMicros(uint32_t elapsed_us, uint32_t& total_us, uint32_t& maximum
     if (elapsed_us > maximum_us) maximum_us = elapsed_us;
 }
 
-std::string_view animationEventId(pet::behaviour::PetFaceAnimationCommand command)
+pet::preset::FaceAnimationEvent animationEvent(pet::behaviour::PetFaceAnimationCommand command)
 {
     using Command = pet::behaviour::PetFaceAnimationCommand;
+    using Event = pet::preset::FaceAnimationEvent;
     switch (command) {
         case Command::ScreenTap:
-            return "screen-tap";
+            return Event::ScreenTap;
         case Command::HeadStroke:
-            return "pet-stroke";
+            return Event::PetStroke;
         case Command::Shake:
-            return "shake";
+            return Event::Shake;
         case Command::SleepTimeout:
-            return "sleep-timeout";
+            return Event::SleepTimeout;
         case Command::Wake:
-            return "wake";
+            return Event::Wake;
         case Command::HappyComplete:
-            return "happy-complete";
+            return Event::HappyComplete;
         case Command::WakeComplete:
-            return "wake-complete";
+            return Event::WakeComplete;
         case Command::None:
-            return {};
+            return Event::None;
     }
-    return {};
+    return Event::None;
 }
 
 void logFaceMemory(std::string_view label)
@@ -272,15 +273,11 @@ void AppPetBase::applyBehaviourOutput(const pet::behaviour::PetFaceBehaviourOutp
     if (output.brightness_changed) {
         PetHardware::setDisplayBrightness(output.brightness);
     }
-    const std::string_view event_id = animationEventId(output.animation);
-    if (event_id.empty() || _preset == nullptr) return;
-    const pet::preset::FaceAnimationEvent event = pet::preset::findFaceAnimationEvent(*_preset, event_id);
-    if (event == pet::preset::kNoFaceAnimationEvent) {
-        mclog::tagError(kTag, "compiled face preset does not define behaviour event {}", event_id);
-        return;
-    }
+    const pet::preset::FaceAnimationEvent event = animationEvent(output.animation);
+    if (event == pet::preset::FaceAnimationEvent::None || _preset == nullptr) return;
     if (!pet::preset::dispatchFaceAnimation(*_preset, event, _preset_evaluation, _animation_runtime)) {
-        mclog::tagError(kTag, "compiled face animation rejected behaviour event {}", static_cast<unsigned>(event));
+        mclog::tagError(kTag, "compiled face animation rejected behaviour event {}",
+                        static_cast<unsigned>(event));
         return;
     }
     _pose_dirty = true;

@@ -66,11 +66,6 @@ bool locateChannelImpl(Evaluation& evaluation, uint8_t node_index, FacePoseChann
             value = &node.transform.scale.y;
             range = kScaleRange;
             return true;
-        case FacePoseChannel::StyleOpacity:
-            if (element_index != 0) return false;
-            value = &node.style.opacity;
-            range = kOpacityRange;
-            return true;
         case FacePoseChannel::CircleCenterX:
             if (node.kind != ShapeKind::Circle || element_index != 0) return false;
             value = &node.circle.center.x;
@@ -124,7 +119,7 @@ bool locateChannelImpl(Evaluation& evaluation, uint8_t node_index, FacePoseChann
         case FacePoseChannel::Opacity:
             if (element_index != 0) return false;
             value = &node.style.opacity;
-            range = {kOpacityMinimum, kOpacityMaximum};
+            range = kOpacityRange;
             return true;
     }
     return false;

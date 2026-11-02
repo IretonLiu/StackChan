@@ -93,7 +93,7 @@
     },
     {
       "id": "style.opacity",
-      "enum": "StyleOpacity",
+      "enum": "Opacity",
       "kind": null,
       "element": false,
       "range": "opacity"
@@ -167,13 +167,45 @@
       "kind": "rounded_polygon",
       "element": true,
       "range": "edge_handle"
+    }
+  ],
+  "events": [
+    {
+      "id": "screen-tap",
+      "enum": "ScreenTap",
+      "aliases": []
     },
     {
-      "id": "style.opacity",
-      "enum": "Opacity",
-      "kind": null,
-      "element": false,
-      "range": "opacity"
+      "id": "pet-stroke",
+      "enum": "PetStroke",
+      "aliases": [
+        "pet"
+      ]
+    },
+    {
+      "id": "shake",
+      "enum": "Shake",
+      "aliases": []
+    },
+    {
+      "id": "sleep-timeout",
+      "enum": "SleepTimeout",
+      "aliases": []
+    },
+    {
+      "id": "wake",
+      "enum": "Wake",
+      "aliases": []
+    },
+    {
+      "id": "wake-complete",
+      "enum": "WakeComplete",
+      "aliases": []
+    },
+    {
+      "id": "happy-complete",
+      "enum": "HappyComplete",
+      "aliases": []
     }
   ]
 }

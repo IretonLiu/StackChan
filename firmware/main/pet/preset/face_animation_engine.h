@@ -8,7 +8,6 @@
 
 #include <array>
 #include <cstdint>
-#include <string_view>
 
 namespace pet::preset {
 
@@ -53,7 +52,7 @@ struct FaceMotionProgramDefinition {
 struct FaceAnimationGoalDefinition {
     const char* id                                  = nullptr;
     const char* pose_id                             = nullptr;
-    FaceAnimationEvent event_mask                   = kNoFaceAnimationEvent;
+    FaceAnimationEventMask event_mask               = kNoFaceAnimationEvent;
     uint8_t priority                                = 0;
     uint32_t duration_ms                            = 0;
     const FaceMotionProgramDefinition* programs     = nullptr;
@@ -69,9 +68,6 @@ struct FaceAnimationRuntime {
     uint32_t elapsed_ms                             = 0;
     bool initialized                                = false;
 };
-
-/** Resolves a compiled preset event name without a firmware-side event enum. */
-[[nodiscard]] FaceAnimationEvent findFaceAnimationEvent(const FacePresetDefinition& preset, std::string_view event_id);
 
 [[nodiscard]] bool initializeFaceAnimation(const FacePresetDefinition& preset, const FacePresetEvaluation& base,
                                            FaceAnimationRuntime& runtime);
