@@ -13,6 +13,7 @@ enum class FacePoseChannel : uint8_t {
     TransformRotationDegrees,
     TransformScaleX,
     TransformScaleY,
+    StyleOpacity,
     CircleCenterX,
     CircleCenterY,
     CircleRadius,
@@ -32,6 +33,7 @@ inline constexpr uint8_t kMaxFacePresetNodes     = 16;
 inline constexpr uint8_t kMaxFacePresetPoses     = 8;
 inline constexpr uint8_t kMaxFacePoseTargets     = 32;
 inline constexpr uint8_t kMaxFaceAnimationGoals  = 8;
+inline constexpr uint8_t kMaxFaceAnimationEvents = 32;
 inline constexpr uint8_t kMaxFaceMotionPrograms  = 8;
 inline constexpr uint8_t kMaxFaceMotionTracks    = 16;
 inline constexpr uint8_t kMaxFaceMotionKeyframes = 8;
@@ -42,6 +44,8 @@ inline constexpr float kRotationMinimum   = -3600.0f;
 inline constexpr float kRotationMaximum   = 3600.0f;
 inline constexpr float kScaleMinimum      = 0.01f;
 inline constexpr float kScaleMaximum      = 16.0f;
+inline constexpr float kOpacityMinimum    = 0.0f;
+inline constexpr float kOpacityMaximum    = 1.0f;
 inline constexpr float kRadiusMinimum     = 0.01f;
 inline constexpr float kRadiusMaximum     = 4096.0f;
 inline constexpr float kOpacityMinimum    = 0.0f;

@@ -126,6 +126,10 @@ LvglFaceRenderer::LvglFaceRenderer(lv_obj_t* parent)
     lv_obj_set_size(canvas_, static_cast<lv_coord_t>(kDesignWidth), static_cast<lv_coord_t>(kDesignHeight));
     lv_obj_align(canvas_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_remove_flag(canvas_, LV_OBJ_FLAG_SCROLLABLE);
+    // The canvas is the frontmost face object. Bubble its click event to the
+    // full-screen panel, whose LVGL callback only records a generic ScreenTap.
+    lv_obj_add_flag(canvas_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(canvas_, LV_OBJ_FLAG_EVENT_BUBBLE);
 
 #if LV_USE_VECTOR_GRAPHIC
     // An ARGB8888 canvas lets the vector engine rasterize straight into the

@@ -12,14 +12,16 @@ COMPILER = FIRMWARE / "tools" / "compile_face_presets.py"
 VALID = FIRMWARE / "pet_faces" / "idle.petface.json"
 
 
+def node(scene, node_id):
+    return next(item for item in scene["nodes"] if item["id"] == node_id)
+
+
 def set_circle_radius(scene, radius):
-    # The visual default may change primitive kinds; keep scalar validation
-    # coverage independent of that authored scene layout.
-    scene["nodes"][2] = {
-        "id": "test-circle",
-        "kind": "circle",
-        "circle": {"center": [160, 120], "radius": radius},
-    }
+    # Keep scalar validation coverage independent of the authored scene layout.
+    value = node(scene, "left-ear")
+    value["kind"] = "circle"
+    value.pop("rounded_polygon", None)
+    value["circle"] = {"center": [160, 120], "radius": radius}
 
 
 def duplicate_pose_target(scene):
@@ -27,7 +29,7 @@ def duplicate_pose_target(scene):
 
 
 def make_concave(scene):
-    polygon = scene["nodes"][0]["rounded_polygon"]
+    polygon = node(scene, "left-ear")["rounded_polygon"]
     polygon["corners"] = [{"position": position} for position in [[0, 0], [1, 0], [0.2, 0.2], [0, 1]]]
     polygon["edges"] = [{}, {}, {}, {}]
 
@@ -61,10 +63,10 @@ class FacePresetCompilerTest(unittest.TestCase):
             ("zero-circle", lambda value: set_circle_radius(value, 0), "must be positive"),
             ("concave", make_concave, "consistent winding"),
             ("unknown-field", lambda value: value.update(unexpected=True), "unknown field"),
-            ("unknown-parent", lambda value: value["nodes"][1].update(parent="not-a-node"), "must name an earlier node"),
+            ("unknown-parent", lambda value: node(value, "left-ear").update(parent="not-a-node"), "must name an earlier node"),
             ("overflow", lambda value: set_circle_radius(value, 1e100), "must fit a finite C++ float"),
             ("invalid-style", lambda value: value["nodes"][0].update(style=[]), "must be an object"),
-            ("invalid-pose-channel", lambda value: value["poses"][0]["targets"][0].update(channel="circle.radius"), "requires a circle node"),
+            ("invalid-pose-channel", lambda value: next(target for target in value["poses"][0]["targets"] if target["node"] == "left-ear").update(channel="circle.radius"), "requires a circle node"),
             ("duplicate-pose-channel", duplicate_pose_target, "duplicates another target channel"),
             ("missing-idle-pose", lambda value: value.update(poses=[]), "must name a defined pose"),
             ("missing-poses", lambda value: value.pop("poses"), "must name a defined pose"),
@@ -78,6 +80,20 @@ class FacePresetCompilerTest(unittest.TestCase):
                 result = self.compile(source, output)
                 self.assertEqual(result.returncode, 2, name)
                 self.assertIn(expected, result.stderr, name)
+
+    def test_v1_pet_event_alias_and_custom_event_compile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            scene = json.loads(VALID.read_text())
+            scene["animations"]["goals"][1]["events"] = ["pet"]
+            scene["animations"]["goals"][2]["events"] = ["pack-custom-event"]
+            source, output = directory / "compat.petface.json", directory / "out.h"
+            source.write_text(json.dumps(scene))
+            result = self.compile(source, output)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            generated = output.read_text()
+            self.assertIn('"pet-stroke"', generated)
+            self.assertIn('"pack-custom-event"', generated)
 
     def test_invalid_pose_contract_fails_loudly(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -42,6 +42,19 @@ target_compile_features(pet_hardware_policy_test PRIVATE cxx_std_17)
 
 add_test(NAME pet_hardware_policy_test COMMAND $<TARGET_FILE:pet_hardware_policy_test>)
 
+add_executable(pet_face_behaviour_controller_test
+    pet_face_behaviour_controller_test.cpp
+    ../main/pet/behaviour/pet_face_behaviour_controller.cpp
+)
+
+target_include_directories(pet_face_behaviour_controller_test PRIVATE
+    ../main
+)
+
+target_compile_features(pet_face_behaviour_controller_test PRIVATE cxx_std_17)
+
+add_test(NAME pet_face_behaviour_controller_test COMMAND $<TARGET_FILE:pet_face_behaviour_controller_test>)
+
 add_executable(face_expression_test
     face_expression_test.cpp
     ../main/pet/face/face.cpp
@@ -102,6 +115,19 @@ target_include_directories(face_animation_engine_test PRIVATE
 target_compile_features(face_animation_engine_test PRIVATE cxx_std_17)
 
 add_test(NAME face_animation_engine_test COMMAND $<TARGET_FILE:face_animation_engine_test>)
+
+add_executable(face_drawing_mailbox_test
+    face_drawing_mailbox_test.cpp
+    ../main/pet/face/face_drawing_mailbox.cpp
+)
+
+target_include_directories(face_drawing_mailbox_test PRIVATE
+    ../main
+)
+
+target_compile_features(face_drawing_mailbox_test PRIVATE cxx_std_17)
+
+add_test(NAME face_drawing_mailbox_test COMMAND $<TARGET_FILE:face_drawing_mailbox_test>)
 
 add_executable(shape_core_test
     shape_core_test.cpp

@@ -11,9 +11,14 @@
 
 namespace {
 
-std::atomic_bool s_head_pet{false};
+std::atomic_uint8_t s_head_interactions{0};
 std::atomic_bool s_shake{false};
 bool s_input_bridge_installed = false;
+
+constexpr uint8_t interactionMask(PetHeadInteraction interaction)
+{
+    return static_cast<uint8_t>(1u << static_cast<uint8_t>(interaction));
+}
 
 void installInputBridge()
 {
@@ -22,12 +27,24 @@ void installInputBridge()
     }
     s_input_bridge_installed = true;
     GetHAL().onHeadPetGesture.connect([](HeadPetGesture gesture) {
-        // A normal touch is the immediate pet affordance. Swipes remain valid
-        // too, but requiring one made the first visual response appear inert.
-        if (gesture == HeadPetGesture::Press || gesture == HeadPetGesture::SwipeForward ||
-            gesture == HeadPetGesture::SwipeBackward) {
-            s_head_pet.store(true, std::memory_order_release);
+        PetHeadInteraction interaction = PetHeadInteraction::Press;
+        switch (gesture) {
+            case HeadPetGesture::Press:
+                interaction = PetHeadInteraction::Press;
+                break;
+            case HeadPetGesture::SwipeForward:
+                interaction = PetHeadInteraction::SwipeForward;
+                break;
+            case HeadPetGesture::SwipeBackward:
+                interaction = PetHeadInteraction::SwipeBackward;
+                break;
+            case HeadPetGesture::Release:
+                interaction = PetHeadInteraction::Release;
+                break;
+            case HeadPetGesture::None:
+                return;
         }
+        s_head_interactions.fetch_or(interactionMask(interaction), std::memory_order_release);
     });
     GetHAL().onImuMotionEvent.connect([](ImuMotionEvent event) {
         if (event == ImuMotionEvent::Shake) {
@@ -84,14 +101,26 @@ void PetHardware::update()
     GetStackChan().update();
 }
 
-bool PetHardware::consumeHeadPet()
+bool PetHardware::consumeHeadInteraction(PetHeadInteraction interaction)
 {
-    return s_head_pet.exchange(false, std::memory_order_acq_rel);
+    const uint8_t mask = interactionMask(interaction);
+    const uint8_t previous = s_head_interactions.fetch_and(static_cast<uint8_t>(~mask), std::memory_order_acq_rel);
+    return (previous & mask) != 0;
 }
 
 bool PetHardware::consumeShake()
 {
     return s_shake.exchange(false, std::memory_order_acq_rel);
+}
+
+void PetHardware::setDisplayBrightness(uint8_t brightness)
+{
+    GetHAL().setBackLightBrightness(brightness, false);
+}
+
+uint8_t PetHardware::displayBrightness()
+{
+    return GetHAL().getBackLightBrightness();
 }
 
 PetHardware::DisplayLock::DisplayLock()

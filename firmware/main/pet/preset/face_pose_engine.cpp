@@ -12,6 +12,7 @@ namespace {
 constexpr MotionResponseRange kCoordinateRange{kCoordinateMinimum, kCoordinateMaximum};
 constexpr MotionResponseRange kRotationRange{kRotationMinimum, kRotationMaximum};
 constexpr MotionResponseRange kScaleRange{kScaleMinimum, kScaleMaximum};
+constexpr MotionResponseRange kOpacityRange{kOpacityMinimum, kOpacityMaximum};
 constexpr MotionResponseRange kRadiusRange{kRadiusMinimum, kRadiusMaximum};
 constexpr float kPoseChangeEpsilon = 0.001f;
 
@@ -64,6 +65,11 @@ bool locateChannelImpl(Evaluation& evaluation, uint8_t node_index, FacePoseChann
             if (element_index != 0) return false;
             value = &node.transform.scale.y;
             range = kScaleRange;
+            return true;
+        case FacePoseChannel::StyleOpacity:
+            if (element_index != 0) return false;
+            value = &node.style.opacity;
+            range = kOpacityRange;
             return true;
         case FacePoseChannel::CircleCenterX:
             if (node.kind != ShapeKind::Circle || element_index != 0) return false;

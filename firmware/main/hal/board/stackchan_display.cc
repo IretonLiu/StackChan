@@ -119,7 +119,9 @@ StackChanAvatarDisplay::StackChanAvatarDisplay(esp_lcd_panel_io_handle_t panel_i
 
     ESP_LOGI(TAG, "Initialize LVGL port");
     lvgl_port_cfg_t port_cfg = ESP_LVGL_PORT_INIT_CONFIG();
-    // port_cfg.task_priority   = 20;
+    // The Project Kiwi LVGL timer owns the ThorVG face rasterizer. Its vector
+    // pipeline needs roughly 21 KiB of stack, well above the port default.
+    port_cfg.task_stack    = 32768;
     port_cfg.task_priority = 3;
 #if CONFIG_SOC_CPU_CORES_NUM > 1
     port_cfg.task_affinity = 1;

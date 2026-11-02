@@ -8,14 +8,9 @@
 
 #include <array>
 #include <cstdint>
+#include <string_view>
 
 namespace pet::preset {
-
-enum class FaceAnimationEvent : uint8_t {
-    None  = 0,
-    Pet   = 1 << 0,
-    Shake = 1 << 1,
-};
 
 enum class FaceMotionSource : uint8_t {
     Keyframes,
@@ -56,13 +51,13 @@ struct FaceMotionProgramDefinition {
 
 /** A named, event-selectable compiled animation goal. */
 struct FaceAnimationGoalDefinition {
-    const char* id                              = nullptr;
-    const char* pose_id                         = nullptr;
-    FaceAnimationEvent event_mask               = FaceAnimationEvent::None;
-    uint8_t priority                            = 0;
-    uint32_t duration_ms                        = 0;
-    const FaceMotionProgramDefinition* programs = nullptr;
-    uint8_t program_count                       = 0;
+    const char* id                                  = nullptr;
+    const char* pose_id                             = nullptr;
+    FaceAnimationEvent event_mask                   = kNoFaceAnimationEvent;
+    uint8_t priority                                = 0;
+    uint32_t duration_ms                            = 0;
+    const FaceMotionProgramDefinition* programs     = nullptr;
+    uint8_t program_count                           = 0;
 };
 
 /** Fixed-capacity state for the generic event/program scheduler. */
@@ -74,6 +69,9 @@ struct FaceAnimationRuntime {
     uint32_t elapsed_ms                             = 0;
     bool initialized                                = false;
 };
+
+/** Resolves a compiled preset event name without a firmware-side event enum. */
+[[nodiscard]] FaceAnimationEvent findFaceAnimationEvent(const FacePresetDefinition& preset, std::string_view event_id);
 
 [[nodiscard]] bool initializeFaceAnimation(const FacePresetDefinition& preset, const FacePresetEvaluation& base,
                                            FaceAnimationRuntime& runtime);

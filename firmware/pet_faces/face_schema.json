@@ -5,6 +5,7 @@
     "max_poses": 8,
     "max_pose_targets": 32,
     "max_animation_goals": 8,
+    "max_animation_events": 32,
     "max_motion_programs": 8,
     "max_motion_tracks": 16,
     "max_motion_keyframes": 8,
@@ -22,6 +23,10 @@
     "scale": {
       "minimum": 0.01,
       "maximum": 16
+    },
+    "opacity": {
+      "minimum": 0,
+      "maximum": 1
     },
     "circle_radius": {
       "minimum": 0.01,
@@ -42,10 +47,6 @@
     "edge_handle": {
       "minimum": 0.08,
       "maximum": 0.45
-    },
-    "opacity": {
-      "minimum": 0,
-      "maximum": 1
     }
   },
   "defaults": {
@@ -89,6 +90,13 @@
       "kind": null,
       "element": false,
       "range": "scale"
+    },
+    {
+      "id": "style.opacity",
+      "enum": "StyleOpacity",
+      "kind": null,
+      "element": false,
+      "range": "opacity"
     },
     {
       "id": "circle.center_x",

@@ -15,6 +15,7 @@ MAX_POLYGON_CORNERS = SCHEMA["limits"]["max_polygon_corners"]
 MAX_POSES = SCHEMA["limits"]["max_poses"]
 MAX_POSE_TARGETS = SCHEMA["limits"]["max_pose_targets"]
 MAX_ANIMATION_GOALS = SCHEMA["limits"]["max_animation_goals"]
+MAX_ANIMATION_EVENTS = SCHEMA["limits"]["max_animation_events"]
 MAX_MOTION_PROGRAMS = SCHEMA["limits"]["max_motion_programs"]
 MAX_MOTION_TRACKS = SCHEMA["limits"]["max_motion_tracks"]
 MAX_MOTION_KEYFRAMES = SCHEMA["limits"]["max_motion_keyframes"]
@@ -23,6 +24,8 @@ MAX_MOTION_KEYFRAMES = SCHEMA["limits"]["max_motion_keyframes"]
 DEFAULT_CONTRACT = Path(__file__).resolve().parents[1] / "pet_faces" / "pose_contract.json"
 MAX_CXX_FLOAT = 3.4028234663852886e38
 ID = re.compile(r"^[a-z][a-z0-9-]*$")
+# The former v1 event spelling remains accepted at the schema boundary.
+EVENT_ALIASES = {"pet": "pet-stroke"}
 
 # channel: (generated enum name, required primitive kind, requires element index, minimum, maximum)
 POSE_CHANNELS = {
@@ -288,7 +291,26 @@ def parse_animations(value, nodes, poses, where):
         pose["id"]: {(target["node_index"], target["enum_name"], target["element"]) for target in pose["targets"]}
         for pose in poses
     }
-    events = {"pet": 1, "shake": 2}
+    # Event identifiers belong to the compiled face pack. The runtime resolves
+    # them through the generated per-preset registry, so new preset events do
+    # not require editing a firmware enum or application mapper.
+    event_ids = []
+    for goal_index, raw_goal in enumerate(goals):
+        goal_where = f"{where}.goals[{goal_index}]"
+        raw_goal = obj(raw_goal, goal_where)
+        raw_events = raw_goal.get("events")
+        if not isinstance(raw_events, list):
+            fail(goal_where + ".events", "must be an array")
+        for event_index, event in enumerate(raw_events):
+            event_where = f"{goal_where}.events[{event_index}]"
+            if not isinstance(event, str) or not ID.fullmatch(event):
+                fail(event_where, "must be a lowercase kebab-case animation event id")
+            event = EVENT_ALIASES.get(event, event)
+            if event not in event_ids:
+                event_ids.append(event)
+    if len(event_ids) > MAX_ANIMATION_EVENTS:
+        fail(where + ".goals", f"uses more than {MAX_ANIMATION_EVENTS} distinct animation events")
+    events = {event: 1 << index for index, event in enumerate(event_ids)}
     parsed, seen = [], set()
     for goal_index, raw_goal in enumerate(goals):
         goal_where = f"{where}.goals[{goal_index}]"
@@ -306,10 +328,12 @@ def parse_animations(value, nodes, poses, where):
             fail(goal_where + ".events", "must be an array")
         event_mask = 0
         for event_index, event in enumerate(raw_events):
-            if not isinstance(event, str) or event not in events:
-                fail(f"{goal_where}.events[{event_index}]", "must be pet or shake")
+            event_where = f"{goal_where}.events[{event_index}]"
+            if not isinstance(event, str) or not ID.fullmatch(event):
+                fail(event_where, "must be a lowercase kebab-case animation event id")
+            event = EVENT_ALIASES.get(event, event)
             if event_mask & events[event]:
-                fail(f"{goal_where}.events[{event_index}]", "duplicates another event")
+                fail(event_where, "duplicates another event")
             event_mask |= events[event]
         goal_priority = raw_goal.get("priority", 0)
         if isinstance(goal_priority, bool) or not isinstance(goal_priority, int) or not 0 <= goal_priority <= 255:
@@ -317,8 +341,6 @@ def parse_animations(value, nodes, poses, where):
         duration_ms = raw_goal.get("duration_ms")
         if isinstance(duration_ms, bool) or not isinstance(duration_ms, int) or duration_ms < 0:
             fail(goal_where + ".duration_ms", "must be a non-negative integer")
-        if event_mask and duration_ms == 0:
-            fail(goal_where + ".duration_ms", "must be positive for an event goal")
         if not event_mask and duration_ms != 0:
             fail(goal_where + ".duration_ms", "must be zero when no event activates the goal")
         programs = raw_goal.get("programs")
@@ -422,7 +444,7 @@ def parse_animations(value, nodes, poses, where):
                        "duration_ms": duration_ms, "programs": parsed_programs})
     if default_goal not in seen:
         fail(where + ".default_goal", "must name a defined goal")
-    return {"default_goal": default_goal, "goals": parsed}
+    return {"default_goal": default_goal, "events": event_ids, "goals": parsed}
 
 
 def parse_scene(path):
@@ -512,6 +534,11 @@ def emit(scenes, output, contract):
             lines.append("};")
         pose_pointer = f"k_{name}_poses" if poses else "nullptr"
         animations = scene["animations"]
+        event_name = f"k_{name}_animation_events"
+        lines.append(f"inline constexpr FaceAnimationEventDefinition {event_name}[] = {{")
+        for event_index, event_id in enumerate(animations["events"]):
+            lines.append(f'    {{"{event_id}", static_cast<FaceAnimationEvent>(1u << {event_index})}},')
+        lines.append("};")
         for goal in animations["goals"]:
             goal_name = f"k_{name}_{goal['id'].replace('-', '_')}"
             for program in goal["programs"]:
@@ -550,7 +577,7 @@ def emit(scenes, output, contract):
             program_pointer = f"{goal_name}_programs" if goal["programs"] else "nullptr"
             lines.append(f"    {{\"{goal['id']}\", \"{goal['pose']}\", static_cast<FaceAnimationEvent>({goal['event_mask']}), {goal['priority']}, {goal['duration_ms']}, {program_pointer}, {len(goal['programs'])}}},")
         lines.append("};")
-        lines += [f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}, {pose_pointer}, {len(poses)}, k_{name}_animation_goals, {len(animations['goals'])}, \"{animations['default_goal']}\"}};", ""]
+        lines += [f"inline constexpr FacePresetDefinition k_{name}{{\"{scene['id']}\", {c(scene['background'])}, k_{name}_nodes, {len(scene['nodes'])}, {pose_pointer}, {len(poses)}, k_{name}_animation_goals, {len(animations['goals'])}, \"{animations['default_goal']}\", {event_name}, {len(animations['events'])}}};", ""]
     lines.append("inline constexpr const FacePresetDefinition* kFacePresets[] = {")
     for scene in scenes:
         lines.append(f"    &k_{scene['id'].replace('-', '_')},")

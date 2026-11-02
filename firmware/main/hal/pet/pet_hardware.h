@@ -13,6 +13,13 @@
  * implementation is deliberately small while the existing board bring-up is
  * retained behind it.
  */
+enum class PetHeadInteraction : uint8_t {
+    Press,
+    SwipeForward,
+    SwipeBackward,
+    Release,
+};
+
 class PetHardware {
 public:
     PetHardware() = delete;
@@ -29,9 +36,15 @@ public:
     static void update();
 
     // Consume events from the retained board touch/IMU detectors. Pet apps do
-    // not access inherited Hal signals directly.
-    static bool consumeHeadPet();
+    // not access inherited Hal signals directly. Individual flags are retained
+    // so press, stroke direction, and release cannot be collapsed into one
+    // lossy "petted" signal.
+    static bool consumeHeadInteraction(PetHeadInteraction interaction);
     static bool consumeShake();
+
+    // Temporary face-state brightness changes never persist user settings.
+    static void setDisplayBrightness(uint8_t brightness);
+    static uint8_t displayBrightness();
 
     class DisplayLock {
     public:

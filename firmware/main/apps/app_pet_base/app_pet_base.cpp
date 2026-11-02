@@ -28,6 +28,30 @@ void accumulateMicros(uint32_t elapsed_us, uint32_t& total_us, uint32_t& maximum
     if (elapsed_us > maximum_us) maximum_us = elapsed_us;
 }
 
+std::string_view animationEventId(pet::behaviour::PetFaceAnimationCommand command)
+{
+    using Command = pet::behaviour::PetFaceAnimationCommand;
+    switch (command) {
+        case Command::ScreenTap:
+            return "screen-tap";
+        case Command::HeadStroke:
+            return "pet-stroke";
+        case Command::Shake:
+            return "shake";
+        case Command::SleepTimeout:
+            return "sleep-timeout";
+        case Command::Wake:
+            return "wake";
+        case Command::HappyComplete:
+            return "happy-complete";
+        case Command::WakeComplete:
+            return "wake-complete";
+        case Command::None:
+            return {};
+    }
+    return {};
+}
+
 void logFaceMemory(std::string_view label)
 {
     mclog::tagInfo(kTag,
@@ -63,8 +87,8 @@ void AppPetBase::onOpen()
     _panel->setBgColor(lv_color_hex(0x071018));
     _panel->setBorderWidth(0);
     _panel->setPaddingAll(0);
+    lv_obj_add_event_cb(_panel->get(), &AppPetBase::onScreenTap, LV_EVENT_CLICKED, this);
 
-    _face_renderer     = std::make_unique<pet::face::LvglFaceRenderer>(_panel->get());
     _preset            = pet::preset::defaultFacePreset();
     const uint32_t now = PetHardware::millis();
 
@@ -86,7 +110,14 @@ void AppPetBase::onOpen()
         _preset = nullptr;
         return;
     }
-    _face_renderer->render(_preset_drawing);
+    if (!_drawing_mailbox.publish(_preset_drawing)) {
+        mclog::tagError(kTag, "initial face drawing could not be published");
+        _preset = nullptr;
+        return;
+    }
+    _face_presenter = std::make_unique<pet::face::LvglFacePresenter>(_panel->get(), _drawing_mailbox);
+    _behaviour.initialize(now);
+    _screen_tapped.store(false, std::memory_order_release);
     _pose_dirty                    = false;
     _face_diagnostics.started_ms   = now;
     logFaceMemory("open");
@@ -100,21 +131,26 @@ void AppPetBase::onOpen()
 
 void AppPetBase::onRunning()
 {
-    const uint32_t now = PetHardware::millis();
-    const bool petted  = PetHardware::consumeHeadPet();
-    const bool shaken  = PetHardware::consumeShake();
+    const uint32_t now        = PetHardware::millis();
+    const uint8_t brightness  = PetHardware::displayBrightness();
 
-    if (_preset != nullptr && petted &&
-        !pet::preset::dispatchFaceAnimation(*_preset, pet::preset::FaceAnimationEvent::Pet,
-                                             _preset_evaluation, _animation_runtime)) {
-        mclog::tagError(kTag, "compiled face animation rejected pet event");
+    if (_screen_tapped.exchange(false, std::memory_order_acq_rel)) {
+        applyBehaviourOutput(_behaviour.handle(pet::behaviour::PetFaceInput::ScreenTap, now, brightness));
     }
-    if (_preset != nullptr && shaken &&
-        !pet::preset::dispatchFaceAnimation(*_preset, pet::preset::FaceAnimationEvent::Shake,
-                                             _preset_evaluation, _animation_runtime)) {
-        mclog::tagError(kTag, "compiled face animation rejected shake event");
+    if (PetHardware::consumeHeadInteraction(PetHeadInteraction::Press)) {
+        applyBehaviourOutput(_behaviour.handle(pet::behaviour::PetFaceInput::HeadPress, now, brightness));
     }
-    if (_preset != nullptr && (petted || shaken)) _pose_dirty = true;
+    if (PetHardware::consumeHeadInteraction(PetHeadInteraction::SwipeForward) ||
+        PetHardware::consumeHeadInteraction(PetHeadInteraction::SwipeBackward)) {
+        applyBehaviourOutput(_behaviour.handle(pet::behaviour::PetFaceInput::HeadStroke, now, brightness));
+    }
+    if (PetHardware::consumeHeadInteraction(PetHeadInteraction::Release)) {
+        applyBehaviourOutput(_behaviour.handle(pet::behaviour::PetFaceInput::HeadRelease, now, brightness));
+    }
+    if (PetHardware::consumeShake()) {
+        applyBehaviourOutput(_behaviour.handle(pet::behaviour::PetFaceInput::Shake, now, brightness));
+    }
+    applyBehaviourOutput(_behaviour.advance(now, brightness));
 
     if (_preset != nullptr && now - _last_face_update_ms >= kStackChanUpdateIntervalMs) {
         const uint32_t face_tick_ms = now - _last_face_update_ms;
@@ -140,21 +176,29 @@ void AppPetBase::onRunning()
         accumulateMicros(static_cast<uint32_t>(esp_timer_get_time() - started_us), _face_diagnostics.advance_us,
                          _face_diagnostics.max_advance_us);
 
-        started_us = esp_timer_get_time();
-        const bool built = evaluated && pet::preset::buildFaceDrawing(_preset_evaluation, _preset_drawing);
-        accumulateMicros(static_cast<uint32_t>(esp_timer_get_time() - started_us), _face_diagnostics.build_us,
-                         _face_diagnostics.max_build_us);
+        // The app task is the sole producer. It builds at simulation cadence,
+        // then replaces any pending state in the fixed mailbox. LVGL consumes
+        // only the newest completed drawing on its own task.
+        bool built = true;
+        if (evaluated && advanced && (pose_dirty || changed)) {
+            started_us = esp_timer_get_time();
+            built = pet::preset::buildFaceDrawing(_preset_evaluation, _preset_drawing);
+            accumulateMicros(static_cast<uint32_t>(esp_timer_get_time() - started_us), _face_diagnostics.build_us,
+                             _face_diagnostics.max_build_us);
+            ++_face_diagnostics.builds;
 
-        if (built && (pose_dirty || changed)) {
-            started_us = esp_timer_get_time();
-            PetHardware::DisplayLock lock;
-            accumulateMicros(static_cast<uint32_t>(esp_timer_get_time() - started_us), _face_diagnostics.lock_us,
-                             _face_diagnostics.max_lock_us);
-            started_us = esp_timer_get_time();
-            _face_renderer->render(_preset_drawing);
-            accumulateMicros(static_cast<uint32_t>(esp_timer_get_time() - started_us), _face_diagnostics.render_us,
-                             _face_diagnostics.max_render_us);
-            ++_face_diagnostics.renders;
+            if (built) {
+                started_us = esp_timer_get_time();
+                const bool published = _drawing_mailbox.publish(_preset_drawing);
+                accumulateMicros(static_cast<uint32_t>(esp_timer_get_time() - started_us),
+                                 _face_diagnostics.publish_us, _face_diagnostics.max_publish_us);
+                if (published) {
+                    ++_face_diagnostics.publishes;
+                } else {
+                    ++_face_diagnostics.dropped_publishes;
+                    _pose_dirty = true;
+                }
+            }
         }
         if (!evaluated || !advanced || !built) {
             ++_face_diagnostics.failures;
@@ -170,25 +214,34 @@ void AppPetBase::onRunning()
         const uint32_t diagnostic_elapsed_ms = now - _face_diagnostics.started_ms;
         if (diagnostic_elapsed_ms >= kFaceDiagnosticsIntervalMs) {
             const uint32_t frames  = _face_diagnostics.frames;
-            const uint32_t renders = _face_diagnostics.renders;
+            const uint32_t builds = _face_diagnostics.builds;
+            const pet::face::LvglFacePresentationMetrics presentation_metrics =
+                _face_presenter == nullptr ? pet::face::LvglFacePresentationMetrics{} : _face_presenter->takeMetrics();
             mclog::tagInfo(
                 kTag,
-                "face perf {}ms: frames={} ({}/s) tick ms avg/max={}/{} renders={} failures={} eval us avg/max={}/{} advance={}/{} build={}/{} lock={}/{} render={}/{}",
+                "face perf {}ms: simulation={} ({}/s) tick ms avg/max={}/{} published={}/{} dropped={} lvgl renders={} (target <={}/s) failures={} eval us avg/max={}/{} advance={}/{} build={}/{} publish={}/{} lvgl render={}/{} stack free min={}B",
                 static_cast<unsigned>(diagnostic_elapsed_ms), static_cast<unsigned>(frames),
                 static_cast<unsigned>(frames * 1000u / diagnostic_elapsed_ms),
                 static_cast<unsigned>(frames == 0 ? 0 : _face_diagnostics.tick_ms / frames),
-                static_cast<unsigned>(_face_diagnostics.max_tick_ms), static_cast<unsigned>(renders),
+                static_cast<unsigned>(_face_diagnostics.max_tick_ms),
+                static_cast<unsigned>(_face_diagnostics.publishes), static_cast<unsigned>(builds),
+                static_cast<unsigned>(_face_diagnostics.dropped_publishes),
+                static_cast<unsigned>(presentation_metrics.renders),
+                static_cast<unsigned>(1000u / pet::face::LvglFacePresenter::kPresentationIntervalMs),
                 static_cast<unsigned>(_face_diagnostics.failures),
                 static_cast<unsigned>(frames == 0 ? 0 : _face_diagnostics.evaluate_us / frames),
                 static_cast<unsigned>(_face_diagnostics.max_evaluate_us),
                 static_cast<unsigned>(frames == 0 ? 0 : _face_diagnostics.advance_us / frames),
                 static_cast<unsigned>(_face_diagnostics.max_advance_us),
-                static_cast<unsigned>(frames == 0 ? 0 : _face_diagnostics.build_us / frames),
+                static_cast<unsigned>(builds == 0 ? 0 : _face_diagnostics.build_us / builds),
                 static_cast<unsigned>(_face_diagnostics.max_build_us),
-                static_cast<unsigned>(renders == 0 ? 0 : _face_diagnostics.lock_us / renders),
-                static_cast<unsigned>(_face_diagnostics.max_lock_us),
-                static_cast<unsigned>(renders == 0 ? 0 : _face_diagnostics.render_us / renders),
-                static_cast<unsigned>(_face_diagnostics.max_render_us));
+                static_cast<unsigned>(builds == 0 ? 0 : _face_diagnostics.publish_us / builds),
+                static_cast<unsigned>(_face_diagnostics.max_publish_us),
+                static_cast<unsigned>(presentation_metrics.renders == 0
+                                          ? 0
+                                          : presentation_metrics.render_us / presentation_metrics.renders),
+                static_cast<unsigned>(presentation_metrics.max_render_us),
+                static_cast<unsigned>(presentation_metrics.min_stack_free_bytes));
             logFaceMemory("sample");
             _face_diagnostics            = {};
             _face_diagnostics.started_ms = now;
@@ -204,11 +257,44 @@ void AppPetBase::onRunning()
     }
 }
 
+void AppPetBase::onScreenTap(lv_event_t* event)
+{
+    auto* app = static_cast<AppPetBase*>(lv_event_get_user_data(event));
+    if (app != nullptr) {
+        // LVGL owns this callback. Only hand the generic event to the app task;
+        // never evaluate a pose or render from the input callback.
+        app->_screen_tapped.store(true, std::memory_order_release);
+    }
+}
+
+void AppPetBase::applyBehaviourOutput(const pet::behaviour::PetFaceBehaviourOutput& output)
+{
+    if (output.brightness_changed) {
+        PetHardware::setDisplayBrightness(output.brightness);
+    }
+    const std::string_view event_id = animationEventId(output.animation);
+    if (event_id.empty() || _preset == nullptr) return;
+    const pet::preset::FaceAnimationEvent event = pet::preset::findFaceAnimationEvent(*_preset, event_id);
+    if (event == pet::preset::kNoFaceAnimationEvent) {
+        mclog::tagError(kTag, "compiled face preset does not define behaviour event {}", event_id);
+        return;
+    }
+    if (!pet::preset::dispatchFaceAnimation(*_preset, event, _preset_evaluation, _animation_runtime)) {
+        mclog::tagError(kTag, "compiled face animation rejected behaviour event {}", static_cast<unsigned>(event));
+        return;
+    }
+    _pose_dirty = true;
+}
+
 void AppPetBase::onClose()
 {
     mclog::tagInfo(kTag, "close Project Kiwi app");
 
+    // Sleep dimming is a temporary behaviour override, never a user setting.
+    // Restore it before removing the UI that owns the face behaviour.
+    applyBehaviourOutput(_behaviour.shutdown());
+
     PetHardware::DisplayLock lock;
-    _face_renderer.reset();
+    _face_presenter.reset();
     _panel.reset();
 }

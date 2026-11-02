@@ -1,6 +1,692 @@
 {
   "version": 2,
   "id": "idle-cat",
+  "poses": [
+    {
+      "id": "idle",
+      "targets": [
+        {
+          "node": "face-root",
+          "channel": "transform.translation_x",
+          "value": 160
+        },
+        {
+          "node": "face-root",
+          "channel": "transform.translation_y",
+          "value": 120
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -30
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 30
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 1
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 1
+        },
+        {
+          "node": "left-blush",
+          "channel": "style.opacity",
+          "value": 0
+        },
+        {
+          "node": "right-blush",
+          "channel": "style.opacity",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "alert",
+      "targets": [
+        {
+          "node": "face-root",
+          "channel": "transform.translation_x",
+          "value": 160
+        },
+        {
+          "node": "face-root",
+          "channel": "transform.translation_y",
+          "value": 120
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -12,
+          "response": {
+            "frequency_hz": 4,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 12,
+          "response": {
+            "frequency_hz": 4,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 1.22,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 1.22,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-blush",
+          "channel": "style.opacity",
+          "value": 0
+        },
+        {
+          "node": "right-blush",
+          "channel": "style.opacity",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "happy",
+      "targets": [
+        {
+          "node": "face-root",
+          "channel": "transform.translation_x",
+          "value": 160
+        },
+        {
+          "node": "face-root",
+          "channel": "transform.translation_y",
+          "value": 120
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -38,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 38,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 0.52,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 0.52,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.rotation_degrees",
+          "value": 15,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.rotation_degrees",
+          "value": -15,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-blush",
+          "channel": "style.opacity",
+          "value": 0.72,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-blush",
+          "channel": "style.opacity",
+          "value": 0.72,
+          "response": {
+            "frequency_hz": 8,
+            "damping_ratio": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "sleepy",
+      "targets": [
+        {
+          "node": "face-root",
+          "channel": "transform.translation_x",
+          "value": 160
+        },
+        {
+          "node": "face-root",
+          "channel": "transform.translation_y",
+          "value": 131,
+          "response": {
+            "frequency_hz": 2,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -52,
+          "response": {
+            "frequency_hz": 2,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 52,
+          "response": {
+            "frequency_hz": 2,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 0.34,
+          "response": {
+            "frequency_hz": 3,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 0.34,
+          "response": {
+            "frequency_hz": 3,
+            "damping_ratio": 1
+          }
+        },
+        {
+          "node": "left-blush",
+          "channel": "style.opacity",
+          "value": 0
+        },
+        {
+          "node": "right-blush",
+          "channel": "style.opacity",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "waking",
+      "targets": [
+        {
+          "node": "face-root",
+          "channel": "transform.translation_x",
+          "value": 160,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "face-root",
+          "channel": "transform.translation_y",
+          "value": 120,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.rotation_degrees",
+          "value": -18,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.rotation_degrees",
+          "value": 18,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_y",
+          "value": 1.25,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_y",
+          "value": 1.25,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.translation_x",
+          "value": 130,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.translation_x",
+          "value": 190,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "left-blush",
+          "channel": "style.opacity",
+          "value": 0,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        },
+        {
+          "node": "right-blush",
+          "channel": "style.opacity",
+          "value": 0,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333333333333333
+          }
+        }
+      ]
+    }
+  ],
+  "animations": {
+    "default_goal": "idle",
+    "goals": [
+      {
+        "id": "idle",
+        "pose": "idle",
+        "events": [
+          "happy-complete"
+        ],
+        "priority": 0,
+        "duration_ms": 0,
+        "programs": [
+          {
+            "id": "blink",
+            "duration_seconds": 4.2,
+            "loop": true,
+            "priority": 20,
+            "tracks": [
+              {
+                "node": "left-eye",
+                "channel": "transform.scale_y",
+                "priority": 0,
+                "response": {
+                  "frequency_hz": 6,
+                  "damping_ratio": 1
+                },
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    {
+                      "time_seconds": 0,
+                      "value": 1
+                    },
+                    {
+                      "time_seconds": 3.5,
+                      "value": 1
+                    },
+                    {
+                      "time_seconds": 3.62,
+                      "value": 0.08
+                    },
+                    {
+                      "time_seconds": 3.78,
+                      "value": 1
+                    },
+                    {
+                      "time_seconds": 4.2,
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "node": "right-eye",
+                "channel": "transform.scale_y",
+                "priority": 0,
+                "response": {
+                  "frequency_hz": 6,
+                  "damping_ratio": 1
+                },
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    {
+                      "time_seconds": 0,
+                      "value": 1
+                    },
+                    {
+                      "time_seconds": 3.5,
+                      "value": 1
+                    },
+                    {
+                      "time_seconds": 3.62,
+                      "value": 0.08
+                    },
+                    {
+                      "time_seconds": 3.78,
+                      "value": 1
+                    },
+                    {
+                      "time_seconds": 4.2,
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "ear-drift",
+            "duration_seconds": 2.8,
+            "loop": true,
+            "priority": 10,
+            "tracks": [
+              {
+                "node": "left-ear",
+                "channel": "transform.rotation_degrees",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": -30,
+                  "amplitude": 8,
+                  "period_seconds": 2.8,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "right-ear",
+                "channel": "transform.rotation_degrees",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 30,
+                  "amplitude": 8,
+                  "period_seconds": 2.8,
+                  "phase_radians": 3.141593
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "alert",
+        "pose": "alert",
+        "events": [
+          "screen-tap",
+          "shake",
+          "wake-complete"
+        ],
+        "priority": 10,
+        "duration_ms": 1200,
+        "programs": []
+      },
+      {
+        "id": "happy",
+        "pose": "happy",
+        "events": [
+          "pet-stroke"
+        ],
+        "priority": 20,
+        "duration_ms": 0,
+        "programs": []
+      },
+      {
+        "id": "sleepy",
+        "pose": "sleepy",
+        "events": [
+          "sleep-timeout"
+        ],
+        "priority": 30,
+        "duration_ms": 0,
+        "programs": []
+      },
+      {
+        "id": "waking",
+        "pose": "waking",
+        "events": [
+          "wake"
+        ],
+        "priority": 40,
+        "duration_ms": 0,
+        "programs": [
+          {
+            "id": "wake-shake",
+            "duration_seconds": 0.8,
+            "loop": false,
+            "priority": 30,
+            "tracks": [
+              {
+                "node": "face-root",
+                "channel": "transform.translation_x",
+                "priority": 0,
+                "response": {
+                  "frequency_hz": 12,
+                  "damping_ratio": 1,
+                  "maximum_step_seconds": 0.008333333333333333
+                },
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    {
+                      "time_seconds": 0,
+                      "value": 160
+                    },
+                    {
+                      "time_seconds": 0.08,
+                      "value": 174
+                    },
+                    {
+                      "time_seconds": 0.16,
+                      "value": 146
+                    },
+                    {
+                      "time_seconds": 0.26,
+                      "value": 171
+                    },
+                    {
+                      "time_seconds": 0.36,
+                      "value": 149
+                    },
+                    {
+                      "time_seconds": 0.48,
+                      "value": 167
+                    },
+                    {
+                      "time_seconds": 0.6,
+                      "value": 155
+                    },
+                    {
+                      "time_seconds": 0.8,
+                      "value": 160
+                    }
+                  ]
+                }
+              },
+              {
+                "node": "left-eye",
+                "channel": "transform.translation_x",
+                "priority": 0,
+                "response": {
+                  "frequency_hz": 12,
+                  "damping_ratio": 1,
+                  "maximum_step_seconds": 0.008333333333333333
+                },
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    {
+                      "time_seconds": 0,
+                      "value": 130
+                    },
+                    {
+                      "time_seconds": 0.08,
+                      "value": 134
+                    },
+                    {
+                      "time_seconds": 0.16,
+                      "value": 126
+                    },
+                    {
+                      "time_seconds": 0.26,
+                      "value": 134
+                    },
+                    {
+                      "time_seconds": 0.36,
+                      "value": 126
+                    },
+                    {
+                      "time_seconds": 0.48,
+                      "value": 134
+                    },
+                    {
+                      "time_seconds": 0.6,
+                      "value": 126
+                    },
+                    {
+                      "time_seconds": 0.8,
+                      "value": 130
+                    }
+                  ]
+                }
+              },
+              {
+                "node": "right-eye",
+                "channel": "transform.translation_x",
+                "priority": 0,
+                "response": {
+                  "frequency_hz": 12,
+                  "damping_ratio": 1,
+                  "maximum_step_seconds": 0.008333333333333333
+                },
+                "source": {
+                  "kind": "keyframes",
+                  "easing": "smoothstep",
+                  "keyframes": [
+                    {
+                      "time_seconds": 0,
+                      "value": 190
+                    },
+                    {
+                      "time_seconds": 0.08,
+                      "value": 194
+                    },
+                    {
+                      "time_seconds": 0.16,
+                      "value": 186
+                    },
+                    {
+                      "time_seconds": 0.26,
+                      "value": 194
+                    },
+                    {
+                      "time_seconds": 0.36,
+                      "value": 186
+                    },
+                    {
+                      "time_seconds": 0.48,
+                      "value": 194
+                    },
+                    {
+                      "time_seconds": 0.6,
+                      "value": 186
+                    },
+                    {
+                      "time_seconds": 0.8,
+                      "value": 190
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "background": [
     7,
     16,
@@ -8,14 +694,56 @@
   ],
   "nodes": [
     {
+      "id": "face-root",
+      "kind": "circle",
+      "style": {
+        "color": [
+          0,
+          0,
+          0
+        ],
+        "opacity": 0,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
+      },
+      "transform": {
+        "translation": [
+          160,
+          120
+        ],
+        "rotation_degrees": 0,
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          160,
+          120
+        ]
+      },
+      "circle": {
+        "center": [
+          160,
+          120
+        ],
+        "radius": 0.01
+      }
+    },
+    {
       "id": "left-ear",
+      "parent": "face-root",
       "kind": "rounded_polygon",
       "style": {
         "color": [
           248,
           245,
           237
-        ]
+        ],
+        "opacity": 1,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
       },
       "transform": {
         "translation": [
@@ -61,24 +789,62 @@
         ],
         "edges": [
           {
-            "bulge": 0.1
+            "bulge": 0.1,
+            "start": 0.28,
+            "end": 0.28
           },
           {
-            "bulge": 0.1
+            "bulge": 0.1,
+            "start": 0.28,
+            "end": 0.28
           },
-          {}
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          }
+        ]
+      },
+      "motion": {
+        "enabled": true,
+        "loop": true,
+        "use_keyframes": true,
+        "property": 2,
+        "amplitude": 8,
+        "period_seconds": 1,
+        "phase_radians": 0,
+        "duration_seconds": 2,
+        "easing": "smoothstep",
+        "keyframes": [
+          {
+            "time_seconds": 0,
+            "value": -30
+          },
+          {
+            "time_seconds": 0.1,
+            "value": -40
+          },
+          {
+            "time_seconds": 0.2,
+            "value": -30
+          }
         ]
       }
     },
     {
       "id": "right-ear",
+      "parent": "face-root",
       "kind": "rounded_polygon",
       "style": {
         "color": [
           248,
           245,
           237
-        ]
+        ],
+        "opacity": 1,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
       },
       "transform": {
         "translation": [
@@ -124,24 +890,48 @@
         ],
         "edges": [
           {
-            "bulge": 0.1
+            "bulge": 0.1,
+            "start": 0.28,
+            "end": 0.28
           },
           {
-            "bulge": 0.1
+            "bulge": 0.1,
+            "start": 0.28,
+            "end": 0.28
           },
-          {}
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          }
         ]
+      },
+      "motion": {
+        "enabled": false,
+        "loop": true,
+        "use_keyframes": false,
+        "property": 2,
+        "amplitude": 8,
+        "period_seconds": 2,
+        "phase_radians": 0,
+        "duration_seconds": 2,
+        "easing": "linear"
       }
     },
     {
       "id": "left-eye",
+      "parent": "face-root",
       "kind": "rounded_polygon",
       "style": {
         "color": [
           248,
           245,
           237
-        ]
+        ],
+        "opacity": 1,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
       },
       "transform": {
         "translation": [
@@ -194,22 +984,54 @@
           }
         ],
         "edges": [
-          {},
-          {},
-          {},
-          {}
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          },
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          },
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          },
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          }
         ]
+      },
+      "motion": {
+        "enabled": false,
+        "loop": true,
+        "use_keyframes": false,
+        "property": 2,
+        "amplitude": 8,
+        "period_seconds": 2,
+        "phase_radians": 0,
+        "duration_seconds": 2,
+        "easing": "linear"
       }
     },
     {
       "id": "right-eye",
+      "parent": "face-root",
       "kind": "rounded_polygon",
       "style": {
         "color": [
           248,
           245,
           237
-        ]
+        ],
+        "opacity": 1,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
       },
       "transform": {
         "translation": [
@@ -262,174 +1084,115 @@
           }
         ],
         "edges": [
-          {},
-          {},
-          {},
-          {}
-        ]
-      }
-    }
-  ],
-  "poses": [
-    {
-      "id": "idle",
-      "targets": [
-        {
-          "node": "left-ear",
-          "channel": "transform.rotation_degrees",
-          "value": -30
-        },
-        {
-          "node": "right-ear",
-          "channel": "transform.rotation_degrees",
-          "value": 30
-        },
-        {
-          "node": "left-eye",
-          "channel": "transform.scale_y",
-          "value": 1
-        },
-        {
-          "node": "right-eye",
-          "channel": "transform.scale_y",
-          "value": 1
-        }
-      ]
-    },
-    {
-      "id": "alert",
-      "targets": [
-        {
-          "node": "left-ear",
-          "channel": "transform.rotation_degrees",
-          "value": -12,
-          "response": {
-            "frequency_hz": 4,
-            "damping_ratio": 1
-          }
-        },
-        {
-          "node": "right-ear",
-          "channel": "transform.rotation_degrees",
-          "value": 12,
-          "response": {
-            "frequency_hz": 4,
-            "damping_ratio": 1
-          }
-        },
-        {
-          "node": "left-eye",
-          "channel": "transform.scale_y",
-          "value": 1.22,
-          "response": {
-            "frequency_hz": 8,
-            "damping_ratio": 1
-          }
-        },
-        {
-          "node": "right-eye",
-          "channel": "transform.scale_y",
-          "value": 1.22,
-          "response": {
-            "frequency_hz": 8,
-            "damping_ratio": 1
-          }
-        }
-      ]
-    }
-  ],
-  "animations": {
-    "default_goal": "idle",
-    "goals": [
-      {
-        "id": "idle",
-        "pose": "idle",
-        "events": [],
-        "priority": 0,
-        "duration_ms": 0,
-        "programs": [
           {
-            "id": "blink",
-            "duration_seconds": 4.2,
-            "loop": true,
-            "priority": 20,
-            "tracks": [
-              {
-                "node": "left-eye",
-                "channel": "transform.scale_y",
-                "priority": 0,
-                "source": {
-                  "kind": "keyframes",
-                  "easing": "smoothstep",
-                  "keyframes": [
-                    { "time_seconds": 0, "value": 1 },
-                    { "time_seconds": 3.5, "value": 1 },
-                    { "time_seconds": 3.62, "value": 0.08 },
-                    { "time_seconds": 3.78, "value": 1 },
-                    { "time_seconds": 4.2, "value": 1 }
-                  ]
-                }
-              },
-              {
-                "node": "right-eye",
-                "channel": "transform.scale_y",
-                "priority": 0,
-                "source": {
-                  "kind": "keyframes",
-                  "easing": "smoothstep",
-                  "keyframes": [
-                    { "time_seconds": 0, "value": 1 },
-                    { "time_seconds": 3.5, "value": 1 },
-                    { "time_seconds": 3.62, "value": 0.08 },
-                    { "time_seconds": 3.78, "value": 1 },
-                    { "time_seconds": 4.2, "value": 1 }
-                  ]
-                }
-              }
-            ]
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
           },
           {
-            "id": "ear-drift",
-            "duration_seconds": 2.8,
-            "loop": true,
-            "priority": 10,
-            "tracks": [
-              {
-                "node": "left-ear",
-                "channel": "transform.rotation_degrees",
-                "priority": 0,
-                "source": {
-                  "kind": "sine",
-                  "center": -30,
-                  "amplitude": 8,
-                  "period_seconds": 2.8,
-                  "phase_radians": 0
-                }
-              },
-              {
-                "node": "right-ear",
-                "channel": "transform.rotation_degrees",
-                "priority": 0,
-                "source": {
-                  "kind": "sine",
-                  "center": 30,
-                  "amplitude": 8,
-                  "period_seconds": 2.8,
-                  "phase_radians": 3.141593
-                }
-              }
-            ]
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          },
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
+          },
+          {
+            "bulge": 0,
+            "start": 0.28,
+            "end": 0.28
           }
         ]
       },
-      {
-        "id": "alert",
-        "pose": "alert",
-        "events": ["pet", "shake"],
-        "priority": 10,
-        "duration_ms": 1200,
-        "programs": []
+      "motion": {
+        "enabled": false,
+        "loop": true,
+        "use_keyframes": false,
+        "property": 2,
+        "amplitude": 8,
+        "period_seconds": 2,
+        "phase_radians": 0,
+        "duration_seconds": 2,
+        "easing": "linear"
       }
-    ]
-  }
+    },
+    {
+      "id": "left-blush",
+      "parent": "face-root",
+      "kind": "circle",
+      "style": {
+        "color": [
+          244,
+          132,
+          150
+        ],
+        "opacity": 0,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
+      },
+      "transform": {
+        "translation": [
+          91,
+          173
+        ],
+        "rotation_degrees": 0,
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          91,
+          173
+        ]
+      },
+      "circle": {
+        "center": [
+          91,
+          173
+        ],
+        "radius": 11
+      }
+    },
+    {
+      "id": "right-blush",
+      "parent": "face-root",
+      "kind": "circle",
+      "style": {
+        "color": [
+          244,
+          132,
+          150
+        ],
+        "opacity": 0,
+        "stroke_width": 0,
+        "fill": true,
+        "stroke": false
+      },
+      "transform": {
+        "translation": [
+          229,
+          173
+        ],
+        "rotation_degrees": 0,
+        "scale": [
+          1,
+          1
+        ],
+        "pivot": [
+          229,
+          173
+        ]
+      },
+      "circle": {
+        "center": [
+          229,
+          173
+        ],
+        "radius": 11
+      }
+    }
+  ]
 }

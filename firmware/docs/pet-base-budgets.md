@@ -24,15 +24,17 @@ Data-bus window only, measured with `heap_caps_print_heap_info()`:
 
 | Region | Size | Free | Content |
 |---|---|---|---|
-| `0x3FCA5218` | 273.2 KiB | 142.2 KiB | main task stack (32 KiB), LVGL task stack (7 KiB), drivers, audio, std heap |
+| `0x3FCA5218` | 273.2 KiB | varies | main task stack (32 KiB), LVGL task stack (32 KiB), drivers, audio, std heap |
 | `0x3FCE9710` | 21.8 KiB | ~0 | early boot and driver allocations, effectively full |
 | `0x3FCF0000` | 32.0 KiB | 32.0 KiB | untouched, still in the heap |
 | `0x3FCB1B08` | 64.0 KiB | 63.2 KiB | DMA pool reserved by PSRAM support for internal-cap DMA |
 | `0x600FE000` | 8.0 KiB | 7.8 KiB | RTC RAM |
 
-Runtime snapshot after opening the procedural face: **246,731 B free**; the
-minimum observed during animated rendering was **241,999 B**. The largest
-contiguous internal block remained **135,168 B**.
+Runtime snapshot after opening the mailbox-driven procedural face: **221,331 B
+free**; the minimum observed during animated rendering was **216,087 B**. The
+largest contiguous internal block remained **110,592 B**. The ~25 KiB reduction
+from the previous baseline is the LVGL task stack increasing from 7 KiB to
+32 KiB so it can safely run the ThorVG renderer.
 
 Not in the heap, from `idf.py size`:
 
@@ -50,8 +52,8 @@ DIRAM total is 341,760 B; static usage is 35% of it.
 ## PSRAM (the plentiful pool)
 
 One pool at `0x3C16_0000` (it starts after the flash DROM mapping window):
-8 MiB, **7,737,160 B free** (largest block 7,733,248 B). The minimum observed
-during animated rendering was 7,724,856 B; no progressive loss was observed.
+8 MiB, **7,719,752 B free** (largest block 7,602,176 B). The minimum observed
+during animated rendering was 7,707,448 B; no progressive loss was observed.
 
 - Face canvas: 300 KiB, ARGB8888 320x240, allocated once and reused.
 - LVGL image cache: 2 MiB reserved by the display bring-up, committed lazily.
@@ -68,7 +70,7 @@ in internal SRAM.
 | `0x009000` | nvs | 16 KiB | |
 | `0x00D000` | otadata | 8 KiB | |
 | `0x00F000` | phy_init | 4 KiB | |
-| `0x020000` | ota_0 | 4.94 MiB | app 1,533,411 B, **70% free** |
+| `0x020000` | ota_0 | 4.94 MiB | app 1,535,168 B, **70% free** |
 | `0x510000` | ota_1 | 4.94 MiB | empty OTA slot |
 | `0xA00000` | assets | 4 MiB | unused while `CONFIG_FLASH_NONE_ASSETS=y` |
 | `0xE00000` | coredump | 64 KiB | |
@@ -108,8 +110,9 @@ Consequences:
 
 ## Frame budget
 
-Measured on-device with the visible blink plus ±8° procedural ear sway. The
-app's rate-limited telemetry uses `esp_timer_get_time()` around each phase:
+Baseline measured on-device with the visible blink plus ±8° procedural ear
+sway, before presentation coalescing. The app's rate-limited telemetry uses
+`esp_timer_get_time()` around each phase:
 
 | Step | Average | Maximum | Notes |
 |---|---:|---:|---|
@@ -126,6 +129,38 @@ main app's scheduling cadence accounts for the remaining time to the 73 ms
 face tick. The older 6.5 ms dirty-rect figure measured renderer work only and
 must not be treated as end-to-end animation throughput.
 
+### Presentation policy
+
+The app task attempts face simulation at a 20 ms cadence. When the evaluated
+pose changes it builds a `FaceDrawing` and publishes it to a fixed three-slot,
+single-producer/single-consumer mailbox. The app task does **not** call LVGL or
+acquire `PetHardware::DisplayLock` for normal frames.
+
+A persistent 33 ms LVGL timer consumes the newest ready mailbox slot while
+`lv_timer_handler()` already owns the LVGL mutex. A slot being rendered is
+never overwritten; a pending ready slot may be replaced, which deliberately
+drops stale frames rather than adding latency. The LVGL task was raised from
+7 KiB to 32 KiB for the renderer; observed minimum remaining stack is
+**12,100 B**.
+
+Measured over two 5.0 s samples after flashing the mailbox path:
+
+| Step | Result |
+|---|---:|
+| Simulation cadence | 32–33/s |
+| Published drawings / drops | 161–166 / 0 |
+| LVGL-owned renders | 55–56 (11.0–11.2/s) |
+| LVGL renderer | 13.4–14.6 ms average; 28.7 ms first-frame maximum |
+| LVGL stack remaining | 12,100 B minimum |
+| Failures / memory growth | 0 / none observed |
+
+A timer-period sweep produced the same 11.0–11.2/s observed rate at 67 ms
+(nominal 15 Hz), 50 ms (20 Hz), 42 ms (~24 Hz), and 33 ms (30 Hz). The final
+33 ms period is retained because it aligns with LVGL refresh and minimizes the
+latency before the next available LVGL cycle; it does not enqueue more work.
+The limiting cadence is now the combined LVGL refresh/flush path, not app-task
+mutex contention.
+
 Budget rules:
 
 - Never render vectors on a task with less than 24 KiB of stack.
@@ -137,15 +172,14 @@ Budget rules:
 
 ## Levers, in order of value
 
-1. Lower `CONFIG_LV_DEF_REFR_PERIOD` (software cap) if smoother motion is ever
-   needed; the panel has headroom for the current ink-only updates.
+1. Instrument the LVGL display-refresh/flush cadence. A mailbox draw is
+   already latest-state and mutex-free for the app task, but runs only about
+   11 fps regardless of the 15/20/24/30 Hz timer request.
 2. Drive the bundled ThorVG canvas directly instead of going through LVGL's
-   vector draw task, so the canvas is created once instead of per frame. Should
-   take the 4.4 ms fixed cost to ~1-2 ms and keeps everything procedural.
-3. Run rendering on a Pet-owned task with a PSRAM-backed stack
-   (`xTaskCreateWithCaps` + `MALLOC_CAP_SPIRAM`) to return `main` to 8 KiB and
-   take the 21 KiB out of internal SRAM. Good fit: a pure render task needs no
-   cache-disabled execution.
+   vector draw task, avoiding per-frame vector-descriptor/task setup. It should
+   reduce the fixed rasterization cost while keeping everything procedural.
+3. Lower `CONFIG_LV_DEF_REFR_PERIOD` only after the refresh/flush trace shows
+   that it, rather than panel work, is the remaining software cap.
 4. Raise the SPI clock to 80 MHz if full-screen animation is ever required.
 5. Bake sprites only if ThorVG must leave the image entirely. It costs the
    procedural rig and needs a build-time bake pipeline; storage is not a

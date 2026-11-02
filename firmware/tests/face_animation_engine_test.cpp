@@ -44,8 +44,8 @@ void testCompiledTrackAndEventExpiry()
     };
     const FaceMotionProgramDefinition programs[] = {{"blink", tracks, 1, 1.0f, true, 0}};
     const FaceAnimationGoalDefinition goals[] = {
-        {"idle", "idle", FaceAnimationEvent::None, 0, 0, programs, 1},
-        {"alert", "alert", FaceAnimationEvent::Pet, 10, 100, nullptr, 0},
+        {"idle", "idle", kNoFaceAnimationEvent, 0, 0, programs, 1},
+        {"alert", "alert", 1u, 10, 100, nullptr, 0},
     };
     const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 2, goals, 2, "idle"};
     FacePresetEvaluation evaluation = base();
@@ -58,11 +58,24 @@ void testCompiledTrackAndEventExpiry()
     assert(changed);
     assert(std::fabs(evaluation.nodes[0].transform.scale.y - 0.1f) < 0.0001f);
 
-    assert(dispatchFaceAnimation(preset, FaceAnimationEvent::Pet, evaluation, runtime));
+    assert(dispatchFaceAnimation(preset, 1u, evaluation, runtime));
     assert(advanceFaceAnimation(preset, 0.001f, evaluation, runtime));
     assert(std::fabs(evaluation.nodes[0].transform.scale.y - 1.4f) < 0.0001f);
     assert(advanceFaceAnimation(preset, 0.11f, evaluation, runtime));
     assert(runtime.active_goal == runtime.default_goal);
+}
+
+void testGeneratedEventRegistryResolvesCustomIds()
+{
+    const FacePoseTargetDefinition targets[] = {{0, FacePoseChannel::TransformScaleY, 0, 1.0f, response()}};
+    const FacePoseDefinition poses[] = {{"idle", targets, 1}};
+    const FaceAnimationGoalDefinition goals[] = {{"idle", "idle", kNoFaceAnimationEvent, 0, 0, nullptr, 0}};
+    const FaceAnimationEventDefinition events[] = {{"custom-pack-event", 1u}, {"other-event", 2u}};
+    const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1, goals, 1, "idle", events, 2};
+
+    assert(findFaceAnimationEvent(preset, "custom-pack-event") == 1u);
+    assert(findFaceAnimationEvent(preset, "other-event") == 2u);
+    assert(findFaceAnimationEvent(preset, "missing") == kNoFaceAnimationEvent);
 }
 
 void testProceduralSourceUsesTheSameChannelPath()
@@ -74,7 +87,7 @@ void testProceduralSourceUsesTheSameChannelPath()
          MotionEasing::Linear, 1.2f, 0.3f, 1.0f, 0.0f},
     };
     const FaceMotionProgramDefinition programs[] = {{"drift", tracks, 1, 1.0f, true, 0}};
-    const FaceAnimationGoalDefinition goals[] = {{"idle", "idle", FaceAnimationEvent::None, 0, 0, programs, 1}};
+    const FaceAnimationGoalDefinition goals[] = {{"idle", "idle", kNoFaceAnimationEvent, 0, 0, programs, 1}};
     const FacePresetDefinition preset{"test", {}, nullptr, 0, poses, 1, goals, 1, "idle"};
     FacePresetEvaluation evaluation = base();
     FaceAnimationRuntime runtime;
@@ -90,6 +103,7 @@ void testProceduralSourceUsesTheSameChannelPath()
 int main()
 {
     testCompiledTrackAndEventExpiry();
+    testGeneratedEventRegistryResolvesCustomIds();
     testProceduralSourceUsesTheSameChannelPath();
     return 0;
 }
