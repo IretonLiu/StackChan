@@ -9,7 +9,7 @@ from pathlib import Path
 
 FIRMWARE = Path(__file__).resolve().parents[1]
 COMPILER = FIRMWARE / "tools" / "compile_face_presets.py"
-VALID = FIRMWARE / "pet_faces" / "idle.petface.json"
+VALID = FIRMWARE / "pet_faces" / "kiwi_v1.petface.json"
 
 
 def node(scene, node_id):

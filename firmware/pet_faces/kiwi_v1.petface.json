@@ -257,6 +257,56 @@
           "node": "right-blush",
           "channel": "style.opacity",
           "value": 0
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.translation_x",
+          "value": 130
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.translation_y",
+          "value": 138
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.translation_x",
+          "value": 190
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.translation_y",
+          "value": 138
+        },
+        {
+          "node": "left-eye",
+          "channel": "transform.scale_x",
+          "value": 1.5
+        },
+        {
+          "node": "right-eye",
+          "channel": "transform.scale_x",
+          "value": 1.5
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.translation_x",
+          "value": 233
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.translation_y",
+          "value": 102
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.translation_x",
+          "value": 87
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.translation_y",
+          "value": 102
         }
       ]
     },
@@ -270,7 +320,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -280,7 +330,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -290,7 +340,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -300,7 +350,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -310,7 +360,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -320,7 +370,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -330,7 +380,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -340,7 +390,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -350,7 +400,7 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
           }
         },
         {
@@ -360,7 +410,27 @@
           "response": {
             "frequency_hz": 12,
             "damping_ratio": 1,
-            "maximum_step_seconds": 0.008333333333333333
+            "maximum_step_seconds": 0.008333
+          }
+        },
+        {
+          "node": "left-ear",
+          "channel": "transform.translation_y",
+          "value": 80,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333
+          }
+        },
+        {
+          "node": "right-ear",
+          "channel": "transform.translation_y",
+          "value": 80,
+          "response": {
+            "frequency_hz": 12,
+            "damping_ratio": 1,
+            "maximum_step_seconds": 0.008333
           }
         }
       ]
@@ -520,7 +590,88 @@
         ],
         "priority": 30,
         "duration_ms": 0,
-        "programs": []
+        "programs": [
+          {
+            "id": "sleep-breathing",
+            "duration_seconds": 6.4,
+            "loop": true,
+            "priority": 0,
+            "tracks": [
+              {
+                "node": "left-eye",
+                "channel": "transform.translation_y",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 138,
+                  "amplitude": 1.5,
+                  "period_seconds": 6.4,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "right-eye",
+                "channel": "transform.translation_y",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 138,
+                  "amplitude": 1.5,
+                  "period_seconds": 6.4,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "right-ear",
+                "channel": "transform.rotation_degrees",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 52,
+                  "amplitude": 2,
+                  "period_seconds": 6.4,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "right-ear",
+                "channel": "transform.translation_y",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 102,
+                  "amplitude": 1.5,
+                  "period_seconds": 6.4,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "left-ear",
+                "channel": "transform.translation_y",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": 102,
+                  "amplitude": 1.5,
+                  "period_seconds": 6.4,
+                  "phase_radians": 0
+                }
+              },
+              {
+                "node": "left-ear",
+                "channel": "transform.rotation_degrees",
+                "priority": 0,
+                "source": {
+                  "kind": "sine",
+                  "center": -52,
+                  "amplitude": 1.5,
+                  "period_seconds": 6.4,
+                  "phase_radians": 3.14159
+                }
+              }
+            ]
+          }
+        ]
       },
       {
         "id": "waking",
@@ -544,7 +695,7 @@
                 "response": {
                   "frequency_hz": 12,
                   "damping_ratio": 1,
-                  "maximum_step_seconds": 0.008333333333333333
+                  "maximum_step_seconds": 0.008333
                 },
                 "source": {
                   "kind": "keyframes",
@@ -592,7 +743,7 @@
                 "response": {
                   "frequency_hz": 12,
                   "damping_ratio": 1,
-                  "maximum_step_seconds": 0.008333333333333333
+                  "maximum_step_seconds": 0.008333
                 },
                 "source": {
                   "kind": "keyframes",
@@ -640,7 +791,7 @@
                 "response": {
                   "frequency_hz": 12,
                   "damping_ratio": 1,
-                  "maximum_step_seconds": 0.008333333333333333
+                  "maximum_step_seconds": 0.008333
                 },
                 "source": {
                   "kind": "keyframes",
@@ -727,13 +878,13 @@
           160,
           120
         ],
-        "radius": 0.01
+        "radius": 1
       }
     },
     {
       "id": "left-ear",
-      "parent": "face-root",
       "kind": "rounded_polygon",
+      "parent": "face-root",
       "style": {
         "color": [
           248,
@@ -808,8 +959,8 @@
     },
     {
       "id": "right-ear",
-      "parent": "face-root",
       "kind": "rounded_polygon",
+      "parent": "face-root",
       "style": {
         "color": [
           248,
@@ -884,8 +1035,8 @@
     },
     {
       "id": "left-eye",
-      "parent": "face-root",
       "kind": "rounded_polygon",
+      "parent": "face-root",
       "style": {
         "color": [
           248,
@@ -973,8 +1124,8 @@
     },
     {
       "id": "right-eye",
-      "parent": "face-root",
       "kind": "rounded_polygon",
+      "parent": "face-root",
       "style": {
         "color": [
           248,
@@ -1062,8 +1213,8 @@
     },
     {
       "id": "left-blush",
-      "parent": "face-root",
       "kind": "circle",
+      "parent": "face-root",
       "style": {
         "color": [
           244,
@@ -1100,8 +1251,8 @@
     },
     {
       "id": "right-blush",
-      "parent": "face-root",
       "kind": "circle",
+      "parent": "face-root",
       "style": {
         "color": [
           244,
