@@ -148,6 +148,20 @@ target_compile_features(shape_core_test PRIVATE cxx_std_17)
 
 add_test(NAME shape_core_test COMMAND $<TARGET_FILE:shape_core_test>)
 
+add_executable(sdf_face_renderer_test
+    sdf_face_renderer_test.cpp
+    ../main/pet/sdf/sdf_face_renderer.cpp
+    ../main/pet/shape/shape_path.cpp
+)
+
+target_include_directories(sdf_face_renderer_test PRIVATE
+    ../main
+)
+
+target_compile_features(sdf_face_renderer_test PRIVATE cxx_std_17)
+
+add_test(NAME sdf_face_renderer_test COMMAND $<TARGET_FILE:sdf_face_renderer_test>)
+
 add_executable(face_preview
     face_preview.cpp
     face_svg_renderer.cpp
